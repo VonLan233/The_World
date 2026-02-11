@@ -10,9 +10,15 @@ from pydantic.alias_generators import to_camel
 class UserCreate(BaseModel):
     """Payload for registering a new user."""
 
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
     username: str = Field(..., min_length=3, max_length=64)
     email: str = Field(..., max_length=320)
     password: str = Field(..., min_length=8, max_length=128)
+    display_name: str | None = None
 
 
 class UserLogin(BaseModel):

@@ -116,7 +116,7 @@ async def register_and_login(
     )
     login_resp = await client.post(
         "/api/v1/auth/login",
-        json={"username": username, "password": password},
+        data={"username": username, "password": password},
     )
     data = login_resp.json()
     token = data["access_token"]

@@ -16,8 +16,27 @@ logger = logging.getLogger("the_world")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup / shutdown logic."""
+    # Auto-create tables when using SQLite (local dev without Docker/PostgreSQL)
+    if settings.DATABASE_URL.startswith("sqlite"):
+        from the_world.db.base import Base
+        from the_world.db.session import engine
+        import the_world.models  # noqa: F401 — ensure all models are registered
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("SQLite dev mode: tables created automatically")
+
+    # Initialise simulation manager
+    from the_world.services.simulation_manager import SimulationManager
+
+    sim_manager = SimulationManager()
+    app.state.sim_manager = sim_manager
+
     logger.info("The World is running  [env=%s]", settings.APP_ENV)
     yield
+
+    # Shutdown
+    sim_manager.shutdown_all()
     logger.info("The World is shutting down.")
 
 

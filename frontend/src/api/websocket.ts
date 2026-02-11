@@ -84,7 +84,7 @@ export class WebSocketClient {
     const host = window.location.host;
     const token = getAuthToken();
     const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
-    const url = `${protocol}//${host}/ws/world/${worldId}${tokenParam}`;
+    const url = `${protocol}//${host}/api/v1/ws/${worldId}${tokenParam}`;
 
     try {
       this.ws = new WebSocket(url);

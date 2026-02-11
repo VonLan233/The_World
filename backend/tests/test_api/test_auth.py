@@ -89,7 +89,7 @@ async def test_login_success(client: AsyncClient) -> None:
 
     resp = await client.post(
         "/api/v1/auth/login",
-        json={"username": "login_user", "password": "MySecretPass99!"},
+        data={"username": "login_user", "password": "MySecretPass99!"},
     )
 
     assert resp.status_code == 200
@@ -115,7 +115,7 @@ async def test_login_wrong_password(client: AsyncClient) -> None:
 
     resp = await client.post(
         "/api/v1/auth/login",
-        json={"username": "wrongpass_user", "password": "TotallyWrong!"},
+        data={"username": "wrongpass_user", "password": "TotallyWrong!"},
     )
 
     assert resp.status_code == 401
@@ -127,7 +127,7 @@ async def test_login_nonexistent_user(client: AsyncClient) -> None:
     """Login with a username that does not exist returns 401."""
     resp = await client.post(
         "/api/v1/auth/login",
-        json={"username": "ghost_user", "password": "NoAccount123!"},
+        data={"username": "ghost_user", "password": "NoAccount123!"},
     )
 
     assert resp.status_code == 401

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import PhaserGame, { type PhaserGameRef } from '@/game/PhaserGame';
 import { EventBus, GameEvents } from '@/game/EventBus';
@@ -7,7 +7,10 @@ import { useSimulationStore } from '@/stores/useSimulationStore';
 import NeedsDisplay from '@/components/character/NeedsDisplay';
 import type { CharacterNeeds } from '@shared/types/character';
 import type { WSServerMessage } from '@shared/types/events';
+import type { CharacterStateUpdate } from '@shared/types/simulation';
 import styles from './WorldPage.module.css';
+
+const SPEED_OPTIONS = [1, 2, 5];
 
 /**
  * Main simulation page.
@@ -17,6 +20,8 @@ import styles from './WorldPage.module.css';
 export default function WorldPage() {
   const { worldId } = useParams<{ worldId: string }>();
   const gameRef = useRef<PhaserGameRef>(null);
+  const [speed, setSpeed] = useState(1);
+  const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
 
   const {
     isRunning,
@@ -36,6 +41,7 @@ export default function WorldPage() {
     if (!worldId) return;
 
     wsClient.connect(worldId);
+    wsClient.send({ type: 'join_world', worldId });
 
     const unsubAll = wsClient.on('*', (msg: WSServerMessage) => {
       switch (msg.type) {
@@ -65,17 +71,25 @@ export default function WorldPage() {
             });
           }
           break;
+        case 'character_joined':
+          break;
       }
     });
 
+    // Listen for character clicks from Phaser
+    const onCharClick = (data: { id: string }) => {
+      setSelectedCharId(data.id);
+    };
+    EventBus.on(GameEvents.CHARACTER_CLICKED, onCharClick);
+
     return () => {
       unsubAll();
+      EventBus.off(GameEvents.CHARACTER_CLICKED, onCharClick);
       wsClient.disconnect();
     };
   }, [worldId, updateCharacterState, addEvent, setClockState]);
 
   const handleSceneReady = useCallback((_scene: Phaser.Scene) => {
-    // Scene is ready; add any initial characters from store
     const states = useSimulationStore.getState().characterStates;
     states.forEach((state, id) => {
       EventBus.emit(GameEvents.ADD_CHARACTER, {
@@ -87,20 +101,37 @@ export default function WorldPage() {
     });
   }, []);
 
-  // Get first character state for sidebar display
-  const firstCharState = characterStates.values().next().value;
-  const displayNeeds: CharacterNeeds = firstCharState?.needs ?? {
-    hunger: 75,
-    energy: 60,
-    social: 45,
-    fun: 80,
-    hygiene: 90,
-    comfort: 65,
+  // Get selected or first character state for sidebar
+  const selectedState: CharacterStateUpdate | undefined =
+    (selectedCharId ? characterStates.get(selectedCharId) : undefined) ??
+    characterStates.values().next().value;
+
+  const displayNeeds: CharacterNeeds = selectedState?.needs ?? {
+    hunger: 75, energy: 60, social: 45, fun: 80, hygiene: 90, comfort: 65,
   };
 
   const handleToggle = () => {
     toggleSimulation();
     wsClient.send({ type: 'toggle_simulation', running: !isRunning });
+  };
+
+  const handleSpeedChange = (newSpeed: number) => {
+    setSpeed(newSpeed);
+    wsClient.send({ type: 'set_speed', speed: newSpeed });
+  };
+
+  const formatTime = (hour: number): string => {
+    return `${String(hour).padStart(2, '0')}:00`;
+  };
+
+  const seasonIcon = (s: string): string => {
+    switch (s) {
+      case 'spring': return '\u{1F338}';
+      case 'summer': return '\u{2600}\u{FE0F}';
+      case 'autumn': return '\u{1F342}';
+      case 'winter': return '\u{2744}\u{FE0F}';
+      default: return '';
+    }
   };
 
   return (
@@ -114,39 +145,65 @@ export default function WorldPage() {
 
         {/* Sidebar */}
         <aside className={styles.sidebar}>
+          {/* Clock + Controls */}
           <div className={styles.sidebarSection}>
             <h3 className={styles.sidebarTitle}>Simulation</h3>
             <div className={styles.clockInfo}>
-              <div className={styles.clockRow}>
-                <span className={styles.clockLabel}>Day</span>
-                <span className={styles.clockValue}>{currentDay}</span>
-              </div>
-              <div className={styles.clockRow}>
-                <span className={styles.clockLabel}>Hour</span>
-                <span className={styles.clockValue}>
-                  {String(currentHour).padStart(2, '0')}:00
-                </span>
-              </div>
-              <div className={styles.clockRow}>
-                <span className={styles.clockLabel}>Season</span>
-                <span className={styles.clockValue}>
-                  {currentSeason.charAt(0).toUpperCase() + currentSeason.slice(1)}
+              <div className={styles.clockMain}>
+                <span className={styles.clockTimeDisplay}>{formatTime(currentHour)}</span>
+                <span className={styles.clockDayDisplay}>
+                  Day {currentDay} {seasonIcon(currentSeason)} {currentSeason}
                 </span>
               </div>
             </div>
-            <button
-              className={`${styles.toggleBtn} ${isRunning ? styles.toggleRunning : ''}`}
-              onClick={handleToggle}
-            >
-              {isRunning ? 'Pause Simulation' : 'Start Simulation'}
-            </button>
+
+            <div className={styles.controls}>
+              <button
+                className={`${styles.toggleBtn} ${isRunning ? styles.toggleRunning : ''}`}
+                onClick={handleToggle}
+              >
+                {isRunning ? '\u23F8 Pause' : '\u25B6 Play'}
+              </button>
+
+              <div className={styles.speedControls}>
+                {SPEED_OPTIONS.map((s) => (
+                  <button
+                    key={s}
+                    className={`${styles.speedBtn} ${speed === s ? styles.speedActive : ''}`}
+                    onClick={() => handleSpeedChange(s)}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
+          {/* Character Info */}
           <div className={styles.sidebarSection}>
-            <h3 className={styles.sidebarTitle}>Character Info</h3>
-            <p className={styles.placeholder}>
-              Select a character in the world to view details.
-            </p>
+            <h3 className={styles.sidebarTitle}>Character</h3>
+            {selectedState ? (
+              <div className={styles.charInfo}>
+                <div className={styles.charInfoRow}>
+                  <span className={styles.charInfoLabel}>Activity</span>
+                  <span className={styles.charInfoValue}>{selectedState.currentActivity}</span>
+                </div>
+                <div className={styles.charInfoRow}>
+                  <span className={styles.charInfoLabel}>Location</span>
+                  <span className={styles.charInfoValue}>{selectedState.currentLocation}</span>
+                </div>
+                <div className={styles.charInfoRow}>
+                  <span className={styles.charInfoLabel}>Mood</span>
+                  <span className={styles.charInfoValue}>
+                    {selectedState.mood} ({Math.round(selectedState.moodScore)})
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className={styles.placeholder}>
+                No character in simulation. Add one to begin.
+              </p>
+            )}
             <NeedsDisplay needs={displayNeeds} />
           </div>
         </aside>
@@ -164,7 +221,7 @@ export default function WorldPage() {
             events.slice(0, 50).map((event) => (
               <div key={event.id} className={styles.eventItem}>
                 <span className={styles.eventTime}>
-                  Day {event.tick} &middot;
+                  T{event.tick}
                 </span>
                 <span className={styles.eventChar}>{event.characterName}</span>
                 <span className={styles.eventDesc}>{event.description}</span>

@@ -24,7 +24,6 @@ interface MoveCharacterData {
 export class WorldScene extends Phaser.Scene {
   private characterSprites: Map<string, CharacterSprite> = new Map();
   private gridGraphics!: Phaser.GameObjects.Graphics;
-  private titleText!: Phaser.GameObjects.Text;
 
   // World dimensions in pixels
   private worldWidth = 2048;
@@ -114,7 +113,7 @@ export class WorldScene extends Phaser.Scene {
 
   private createUI(): void {
     // Title overlay (fixed to camera)
-    this.titleText = this.add
+    this.add
       .text(16, 16, 'The World - Simulation View', {
         fontFamily: 'Inter, system-ui, sans-serif',
         fontSize: '18px',
@@ -164,7 +163,7 @@ export class WorldScene extends Phaser.Scene {
       (data: MoveCharacterData) => {
         const sprite = this.characterSprites.get(data.id);
         if (sprite) {
-          sprite.moveTo(data.x, data.y);
+          sprite.moveToPosition(data.x, data.y);
         }
       },
       this,
@@ -193,12 +192,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.characterSprites.has(data.id)) {
       // Already exists, just move it
       const existing = this.characterSprites.get(data.id)!;
-      existing.moveTo(data.x, data.y);
+      existing.moveToPosition(data.x, data.y);
       return;
     }
 
     const sprite = new CharacterSprite(this, data.x, data.y, data.name, data.color);
-    this.add.existing(sprite);
+    this.add.existing(sprite as unknown as Phaser.GameObjects.GameObject);
     this.characterSprites.set(data.id, sprite);
 
     // Click handler

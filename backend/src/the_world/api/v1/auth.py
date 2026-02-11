@@ -5,7 +5,7 @@ from typing import Annotated
 
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from the_world.config import Settings
 from the_world.dependencies import get_db, get_settings
 from the_world.models.user import User
-from the_world.schemas.user import AuthResponse, UserCreate, UserLogin, UserResponse
+from the_world.schemas.user import AuthResponse, UserCreate, UserResponse
 
 router = APIRouter()
 
@@ -104,7 +104,7 @@ async def register(
         username=body.username,
         email=body.email,
         hashed_password=hash_password(body.password),
-        display_name=body.username,
+        display_name=body.display_name or body.username,
     )
     db.add(user)
     await db.flush()
@@ -119,15 +119,15 @@ async def register(
 
 @router.post("/login", response_model=AuthResponse)
 async def login(
-    body: UserLogin,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
     """Authenticate and return a JWT access token + user profile."""
-    result = await db.execute(select(User).where(User.username == body.username))
+    result = await db.execute(select(User).where(User.username == form_data.username))
     user = result.scalar_one_or_none()
 
-    if user is None or not verify_password(body.password, user.hashed_password):
+    if user is None or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

@@ -44,29 +44,35 @@
   margin-bottom: var(--space-md);
 }
 
+/* Clock */
 .clockInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
   margin-bottom: var(--space-md);
 }
 
-.clockRow {
+.clockMain {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  gap: var(--space-xs);
 }
 
-.clockLabel {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.clockValue {
-  font-size: var(--text-sm);
-  font-weight: 600;
+.clockTimeDisplay {
+  font-size: 2rem;
+  font-weight: 700;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
+}
+
+.clockDayDisplay {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .toggleBtn {
@@ -90,6 +96,62 @@
 
 .toggleRunning:hover {
   background-color: #e09500;
+}
+
+.speedControls {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.speedBtn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.speedBtn:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-border);
+}
+
+.speedActive {
+  color: white;
+  background-color: var(--color-accent-primary);
+}
+
+.speedActive:hover {
+  background-color: var(--color-accent-primary);
+}
+
+/* Character info */
+.charInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.charInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.charInfoLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.charInfoValue {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  text-transform: capitalize;
 }
 
 .placeholder {
@@ -145,6 +207,7 @@
   color: var(--color-text-muted);
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
+  min-width: 48px;
 }
 
 .eventChar {

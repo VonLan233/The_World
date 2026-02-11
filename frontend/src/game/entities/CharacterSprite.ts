@@ -66,7 +66,7 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
   /**
    * Smoothly move the character to a new position using tweens.
    */
-  moveTo(targetX: number, targetY: number): void {
+  moveToPosition(targetX: number, targetY: number): void {
     // Cancel any in-progress movement
     if (this.moveTween && this.moveTween.isPlaying()) {
       this.moveTween.stop();
@@ -88,7 +88,7 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
   /**
    * Update the displayed name.
    */
-  setName(name: string): void {
+  setDisplayName(name: string): void {
     this.nameLabel.setText(name);
   }
 
