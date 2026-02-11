@@ -1,6 +1,11 @@
+/* ============================================
+   Character Create Page - Full Form Styles
+   ============================================ */
+
 .page {
   flex: 1;
   padding: var(--space-xl) 0;
+  padding-bottom: var(--space-2xl);
 }
 
 .container {
@@ -8,6 +13,8 @@
   margin: 0 auto;
   padding: 0 var(--space-lg);
 }
+
+/* ---- Header ---- */
 
 .header {
   margin-bottom: var(--space-xl);
@@ -37,23 +44,571 @@
   color: var(--color-text-secondary);
 }
 
-.placeholder {
+/* ---- Auth guard message ---- */
+
+.authGuard {
   background-color: var(--color-bg-card);
-  border: 2px dashed var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-2xl);
   text-align: center;
-  color: var(--color-text-secondary);
 }
 
-.placeholder h3 {
+.authGuard h3 {
   font-size: var(--text-xl);
   color: var(--color-text-primary);
   margin-bottom: var(--space-sm);
 }
 
-.placeholderIcon {
-  font-size: 3rem;
-  margin-bottom: var(--space-md);
-  opacity: 0.5;
+.authGuard p {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.authGuardBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  background-color: var(--color-accent-primary);
+  color: white;
+  transition: all var(--transition-fast);
+}
+
+.authGuardBtn:hover {
+  background-color: #8f6fd4;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---- Form ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* ---- Section cards ---- */
+
+.section {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.sectionTitle {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ---- Form fields ---- */
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.inputError {
+  border-color: var(--color-danger);
+}
+
+.select {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+  padding-right: var(--space-xl);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+  font-family: inherit;
+  transition: border-color var(--transition-fast);
+}
+
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.textareaLarge {
+  min-height: 140px;
+}
+
+.charCount {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-align: right;
+  margin-top: 2px;
+}
+
+.charCountWarn {
+  color: var(--color-warning);
+}
+
+/* ---- Color field ---- */
+
+.colorFieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.colorPicker {
+  width: 40px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-secondary);
+  cursor: pointer;
+}
+
+.colorPicker::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.colorPicker::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.colorTextInput {
+  flex: 1;
+}
+
+/* ---- Personality sliders ---- */
+
+.sliderGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.sliderItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.sliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sliderLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sliderCnLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-left: var(--space-xs);
+  font-weight: 400;
+}
+
+.sliderValue {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent-primary);
+  min-width: 28px;
+  text-align: right;
+}
+
+.sliderDesc {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    to right,
+    var(--color-bg-tertiary) 0%,
+    var(--color-accent-primary) 100%
+  );
+  outline: none;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent-primary);
+  border: 2px solid var(--color-bg-card);
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(124, 92, 191, 0.4);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 8px rgba(124, 92, 191, 0.6);
+}
+
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent-primary);
+  border: 2px solid var(--color-bg-card);
+  cursor: pointer;
+}
+
+/* ---- Skill sliders ---- */
+
+.skillSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    to right,
+    var(--color-bg-tertiary) 0%,
+    var(--color-accent-tertiary) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.skillSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent-tertiary);
+  border: 2px solid var(--color-bg-card);
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(78, 205, 196, 0.4);
+}
+
+.skillSlider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent-tertiary);
+  border: 2px solid var(--color-bg-card);
+  cursor: pointer;
+}
+
+.skillValue {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent-tertiary);
+  min-width: 22px;
+  text-align: right;
+}
+
+.addSkillRow {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.addSkillRow .input {
+  flex: 1;
+}
+
+.addBtn {
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.addBtn:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+.removeSkillBtn {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  padding: 2px var(--space-xs);
+  transition: color var(--transition-fast);
+}
+
+.removeSkillBtn:hover {
+  color: var(--color-danger);
+}
+
+/* ---- Tag / chip inputs ---- */
+
+.tagInputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tagInputRow {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.tagInputRow .input {
+  flex: 1;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px var(--space-sm);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.tagDelete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.tagDelete:hover {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+/* ---- Error and status ---- */
+
+.errorBanner {
+  background-color: rgba(231, 76, 60, 0.1);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.errorBannerClose {
+  color: var(--color-danger);
+  font-size: var(--text-lg);
+  padding: 0 var(--space-xs);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.errorBannerClose:hover {
+  opacity: 1;
+}
+
+.fieldError {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}
+
+/* ---- Submit area ---- */
+
+.submitArea {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--text-base);
+  background-color: var(--color-accent-primary);
+  color: white;
+  transition: all var(--transition-fast);
+  min-width: 160px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background-color: #8f6fd4;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: var(--text-base);
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+}
+
+.cancelBtn:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+/* ---- Loading spinner ---- */
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 768px) {
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+
+  .submitArea {
+    flex-direction: column-reverse;
+  }
+
+  .submitBtn,
+  .cancelBtn {
+    width: 100%;
+  }
+
+  .section {
+    padding: var(--space-md);
+  }
+
+  .addSkillRow {
+    flex-direction: column;
+  }
 }

@@ -3,36 +3,34 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from the_world.config import Settings
 from the_world.dependencies import get_db, get_settings
 from the_world.models.user import User
-from the_world.schemas.user import Token, UserCreate, UserLogin, UserResponse
+from the_world.schemas.user import AuthResponse, UserCreate, UserLogin, UserResponse
 
 router = APIRouter()
 
 # ---------------------------------------------------------------------------
-# Password hashing
+# Password hashing (using bcrypt directly -- passlib is unmaintained)
 # ---------------------------------------------------------------------------
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def hash_password(plain: str) -> str:
     """Return a bcrypt hash of *plain*."""
-    return pwd_context.hash(plain)
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Verify *plain* against *hashed*."""
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -85,12 +83,13 @@ async def get_current_user(
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     body: UserCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
-    """Register a new user account."""
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AuthResponse:
+    """Register a new user account and return a JWT + user profile."""
     # Check for existing username / email
     existing = await db.execute(
         select(User).where((User.username == body.username) | (User.email == body.email))
@@ -110,16 +109,21 @@ async def register(
     db.add(user)
     await db.flush()
     await db.refresh(user)
-    return user
+
+    token = create_access_token(data={"sub": user.username}, settings=settings)
+    return AuthResponse(
+        access_token=token,
+        user=UserResponse.model_validate(user),
+    )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AuthResponse)
 async def login(
     body: UserLogin,
     db: Annotated[AsyncSession, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> dict[str, str]:
-    """Authenticate and return a JWT access token."""
+) -> AuthResponse:
+    """Authenticate and return a JWT access token + user profile."""
     result = await db.execute(select(User).where(User.username == body.username))
     user = result.scalar_one_or_none()
 
@@ -131,7 +135,10 @@ async def login(
         )
 
     token = create_access_token(data={"sub": user.username}, settings=settings)
-    return {"access_token": token, "token_type": "bearer"}
+    return AuthResponse(
+        access_token=token,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.get("/me", response_model=UserResponse)

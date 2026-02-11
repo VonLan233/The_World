@@ -3,7 +3,8 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 class UserCreate(BaseModel):
@@ -24,6 +25,12 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     """Public representation of a user."""
 
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
     id: uuid.UUID
     username: str
     email: str
@@ -32,11 +39,17 @@ class UserResponse(BaseModel):
     bio: str | None = None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class Token(BaseModel):
     """JWT token response."""
 
     access_token: str
     token_type: str = "bearer"
+
+
+class AuthResponse(BaseModel):
+    """Combined login/register response: token + user profile."""
+
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
