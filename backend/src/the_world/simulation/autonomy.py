@@ -22,6 +22,7 @@ def choose_activity(
     personality: dict[str, float],
     location_type: str,
     available_locations: dict[str, str] | None = None,
+    nearby_characters: list[dict] | None = None,
 ) -> tuple[Activity, str | None]:
     """Pick the best activity for a character.
 
@@ -41,6 +42,9 @@ def choose_activity(
         Mapping of ``location_name → location_type`` for all locations in
         the world.  Needed so we can figure out *where* to go when the
         character decides to relocate.
+    nearby_characters:
+        List of dicts with ``id`` and ``name`` for characters at the same
+        location.  When present, social activities get a scoring boost.
     """
     available_locations = available_locations or {}
 
@@ -69,10 +73,14 @@ def choose_activity(
         candidates = [IDLE]
 
     urgency = needs.get_urgency_scores()
+    has_nearby = bool(nearby_characters)
     scored: list[tuple[float, Activity]] = []
 
     for act in candidates:
         score = _score_activity(act, urgency, personality)
+        # Boost social activities when other characters are nearby
+        if has_nearby and "social" in act.need_effects and act.need_effects["social"] > 0:
+            score += 0.15
         scored.append((score, act))
 
     # ------------------------------------------------------------------

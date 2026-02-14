@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     SIM_TIME_SCALE: float = 1.0
     SIM_TICK_INTERVAL_MS: int = 1000
 
+    # --- AI ---
+    CLAUDE_DAILY_BUDGET: int = 20
+    AI_INTERACTION_COOLDOWN: int = 60
+    AI_ENCOUNTER_CHECK_INTERVAL: int = 10
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

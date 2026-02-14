@@ -36,6 +36,20 @@ export interface SimulationEvent {
   data: Record<string, unknown>;
 }
 
+/** AI-generated dialogue event */
+export interface DialogueEvent {
+  id: string;
+  speakerName: string;
+  speakerId: string;
+  targetName: string;
+  targetId: string;
+  dialogue: string;
+  tierUsed: 'tier1_claude' | 'tier2_ollama' | 'tier3_rules';
+  tick: number;
+  timestamp: number;
+  location: string;
+}
+
 /** Character state update from the simulation engine */
 export interface CharacterStateUpdate {
   characterId: string;
@@ -45,4 +59,12 @@ export interface CharacterStateUpdate {
   mood: string;
   moodScore: number;
   position: { x: number; y: number };
+}
+
+/** Data payload for relationship_update events */
+export interface RelationshipUpdateData {
+  targetId: string;
+  targetName: string;
+  milestone: string;
+  friendshipScore: number;
 }

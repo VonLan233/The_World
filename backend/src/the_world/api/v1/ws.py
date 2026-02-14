@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
+from the_world.db.session import async_session_factory
 from the_world.services.simulation_manager import SimulationManager
 
 logger = logging.getLogger("the_world.ws")
@@ -190,5 +191,23 @@ def register_engine_callbacks(world_id: str, engine: Any) -> None:
             },
         })
 
+    # -- AI encounter callback --
+    from the_world.ai.integration import AIIntegration
+
+    ai_integration = AIIntegration(engine, async_session_factory)
+
+    async def on_encounter(payload: dict[str, Any]) -> None:
+        tick = payload.get("tick", 0)
+        try:
+            dialogue_events = await ai_integration.process_encounters(tick)
+            for evt in dialogue_events:
+                await connection_manager.broadcast(world_id, {
+                    "type": "dialogue",
+                    "dialogue": evt,
+                })
+        except Exception:
+            logger.exception("Error processing AI encounters")
+
     engine.on_tick(on_tick)
     engine.on_event(on_event)
+    engine.on_encounter(on_encounter)

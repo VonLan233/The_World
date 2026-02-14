@@ -46,3 +46,46 @@ def test_returns_valid_activity():
     activity, _ = choose_activity(needs, personality, "home")
     assert activity.name != ""
     assert activity.duration_minutes > 0
+
+
+def test_nearby_characters_backward_compatible():
+    """Calling without nearby_characters still works (default None)."""
+    needs = NeedsManager()
+    personality = {"openness": 0.5, "conscientiousness": 0.5, "extraversion": 0.5,
+                   "agreeableness": 0.5, "neuroticism": 0.5}
+    activity, _ = choose_activity(needs, personality, "park")
+    assert activity.name != ""
+
+
+def test_nearby_characters_boosts_social():
+    """When nearby_characters is provided, social activities should score higher.
+
+    We test this statistically: run many trials with and without nearby chars.
+    The social activity selection rate should increase with nearby characters.
+    """
+    import random
+    random.seed(42)
+
+    personality = {"openness": 0.5, "conscientiousness": 0.5, "extraversion": 0.7,
+                   "agreeableness": 0.5, "neuroticism": 0.3}
+    needs = NeedsManager(social=30.0)  # Low social → wants social activities
+    nearby = [{"id": "other-1", "name": "Other"}]
+
+    social_without = 0
+    social_with = 0
+    trials = 200
+
+    random.seed(42)
+    for _ in range(trials):
+        act, _ = choose_activity(needs, personality, "park", nearby_characters=None)
+        if "social" in act.need_effects and act.need_effects.get("social", 0) > 0:
+            social_without += 1
+
+    random.seed(42)
+    for _ in range(trials):
+        act, _ = choose_activity(needs, personality, "park", nearby_characters=nearby)
+        if "social" in act.need_effects and act.need_effects.get("social", 0) > 0:
+            social_with += 1
+
+    # With nearby characters, social activities should be picked at least as often
+    assert social_with >= social_without

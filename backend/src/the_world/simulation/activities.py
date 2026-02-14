@@ -85,6 +85,24 @@ HANGOUT = Activity(
     description_template="{name} is hanging out",
 )
 
+DEEP_TALK = Activity(
+    name="deep_talk",
+    duration_minutes=40,
+    need_effects={"social": 45.0, "fun": 10.0},
+    required_location_types=["park", "home", "restaurant"],
+    personality_affinity={"openness": 0.6, "agreeableness": 0.5},
+    description_template="{name} is having a deep conversation",
+)
+
+GROUP_HANGOUT = Activity(
+    name="group_hangout",
+    duration_minutes=60,
+    need_effects={"social": 40.0, "fun": 30.0},
+    required_location_types=["park", "entertainment", "restaurant"],
+    personality_affinity={"extraversion": 0.8},
+    description_template="{name} is hanging out with a group",
+)
+
 # Entertainment
 READ = Activity(
     name="read",
@@ -202,7 +220,7 @@ ALL_ACTIVITIES: dict[str, Activity] = {
     a.name: a
     for a in [
         EAT, SLEEP, NAP, SHOWER, USE_BATHROOM,
-        CHAT, HANGOUT,
+        CHAT, HANGOUT, DEEP_TALK, GROUP_HANGOUT,
         READ, WATCH_TV, PLAY_GAMES, EXERCISE,
         WORK, STUDY, COOK,
         RELAX, MEDITATE, GARDEN,

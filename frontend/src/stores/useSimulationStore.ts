@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SimulationEvent, ClockState, CharacterStateUpdate } from '@shared/types/simulation';
+import type { SimulationEvent, ClockState, CharacterStateUpdate, DialogueEvent } from '@shared/types/simulation';
 
 interface SimulationState {
   isRunning: boolean;
@@ -9,6 +9,7 @@ interface SimulationState {
   currentSeason: ClockState['currentSeason'];
   characterStates: Map<string, CharacterStateUpdate>;
   events: SimulationEvent[];
+  dialogues: DialogueEvent[];
   maxEvents: number;
 }
 
@@ -18,6 +19,7 @@ interface SimulationActions {
   setClockState: (clock: ClockState) => void;
   toggleSimulation: () => void;
   setRunning: (running: boolean) => void;
+  addDialogue: (dialogue: DialogueEvent) => void;
   clearEvents: () => void;
   reset: () => void;
 }
@@ -30,6 +32,7 @@ const initialState: SimulationState = {
   currentSeason: 'spring',
   characterStates: new Map(),
   events: [],
+  dialogues: [],
   maxEvents: 200,
 };
 
@@ -71,6 +74,16 @@ export const useSimulationStore = create<SimulationState & SimulationActions>((s
 
   setRunning: (running: boolean) => {
     set({ isRunning: running });
+  },
+
+  addDialogue: (dialogue: DialogueEvent) => {
+    set((state) => {
+      const dialogues = [dialogue, ...state.dialogues];
+      if (dialogues.length > state.maxEvents) {
+        dialogues.length = state.maxEvents;
+      }
+      return { dialogues };
+    });
   },
 
   clearEvents: () => {

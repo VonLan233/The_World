@@ -3,7 +3,7 @@
  * Uses a discriminated union pattern on the `type` field.
  */
 
-import type { CharacterStateUpdate, ClockState, SimulationEvent } from './simulation';
+import type { CharacterStateUpdate, ClockState, DialogueEvent, SimulationEvent } from './simulation';
 
 /** Client -> Server messages */
 export type WSClientMessage =
@@ -22,6 +22,7 @@ export type WSServerMessage =
   | { type: 'simulation_event'; event: SimulationEvent }
   | { type: 'character_joined'; characterId: string; characterName: string }
   | { type: 'character_left'; characterId: string }
+  | { type: 'dialogue'; dialogue: DialogueEvent }
   | { type: 'error'; message: string; code?: string }
   | { type: 'pong' };
 

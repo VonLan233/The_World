@@ -28,4 +28,6 @@ export const GameEvents = {
   CHARACTER_CLICKED: 'character-clicked',
   /** Emitted by React to update the simulation clock display */
   CLOCK_UPDATE: 'clock-update',
+  /** Emitted by React when a dialogue event arrives — shows a speech bubble */
+  SHOW_SPEECH_BUBBLE: 'show-speech-bubble',
 } as const;

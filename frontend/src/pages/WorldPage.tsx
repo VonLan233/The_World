@@ -5,9 +5,12 @@ import { EventBus, GameEvents } from '@/game/EventBus';
 import { wsClient } from '@/api/websocket';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import NeedsDisplay from '@/components/character/NeedsDisplay';
+import RelationshipPanel from '@/components/relationship/RelationshipPanel';
+import { useRelationshipStore } from '@/stores/useRelationshipStore';
 import type { CharacterNeeds } from '@shared/types/character';
 import type { WSServerMessage } from '@shared/types/events';
 import type { CharacterStateUpdate } from '@shared/types/simulation';
+import ChatLog from '@/components/dialogue/ChatLog';
 import styles from './WorldPage.module.css';
 
 const SPEED_OPTIONS = [1, 2, 5];
@@ -29,9 +32,11 @@ export default function WorldPage() {
     currentDay,
     currentSeason,
     events,
+    dialogues,
     characterStates,
     updateCharacterState,
     addEvent,
+    addDialogue,
     setClockState,
     toggleSimulation,
   } = useSimulationStore();
@@ -58,6 +63,16 @@ export default function WorldPage() {
           break;
         case 'simulation_event':
           addEvent(msg.event);
+          if (msg.event.type === 'relationship_update' && msg.event.data) {
+            const d = msg.event.data as Record<string, unknown>;
+            useRelationshipStore.getState().updateRelationshipFromEvent({
+              characterId: msg.event.characterId,
+              targetId: d.targetId as string,
+              targetName: d.targetName as string,
+              friendshipScore: d.friendshipScore as number,
+              relationshipType: (d.relationshipType as string) ?? 'acquaintance',
+            });
+          }
           break;
         case 'world_state':
           setClockState(msg.clock);
@@ -70,6 +85,13 @@ export default function WorldPage() {
               y: charState.position.y,
             });
           }
+          break;
+        case 'dialogue':
+          addDialogue(msg.dialogue);
+          EventBus.emit(GameEvents.SHOW_SPEECH_BUBBLE, {
+            characterId: msg.dialogue.speakerId,
+            text: msg.dialogue.dialogue,
+          });
           break;
         case 'character_joined':
           break;
@@ -87,7 +109,7 @@ export default function WorldPage() {
       EventBus.off(GameEvents.CHARACTER_CLICKED, onCharClick);
       wsClient.disconnect();
     };
-  }, [worldId, updateCharacterState, addEvent, setClockState]);
+  }, [worldId, updateCharacterState, addEvent, addDialogue, setClockState]);
 
   const handleSceneReady = useCallback((_scene: Phaser.Scene) => {
     const states = useSimulationStore.getState().characterStates;
@@ -206,28 +228,40 @@ export default function WorldPage() {
             )}
             <NeedsDisplay needs={displayNeeds} />
           </div>
+
+          {/* Relationships */}
+          <div className={styles.sidebarSection}>
+            <RelationshipPanel characterId={selectedState?.characterId ?? null} />
+          </div>
         </aside>
       </div>
 
-      {/* Event log */}
+      {/* Bottom panels: Event log + Chat log */}
       <div className={styles.eventLog}>
-        <h4 className={styles.eventLogTitle}>Event Log</h4>
-        <div className={styles.eventList}>
-          {events.length === 0 ? (
-            <p className={styles.eventEmpty}>
-              No events yet. Start the simulation to see activity.
-            </p>
-          ) : (
-            events.slice(0, 50).map((event) => (
-              <div key={event.id} className={styles.eventItem}>
-                <span className={styles.eventTime}>
-                  T{event.tick}
-                </span>
-                <span className={styles.eventChar}>{event.characterName}</span>
-                <span className={styles.eventDesc}>{event.description}</span>
-              </div>
-            ))
-          )}
+        <div style={{ display: 'flex', gap: '16px', height: '100%' }}>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <h4 className={styles.eventLogTitle}>Event Log</h4>
+            <div className={styles.eventList}>
+              {events.length === 0 ? (
+                <p className={styles.eventEmpty}>
+                  No events yet. Start the simulation to see activity.
+                </p>
+              ) : (
+                events.slice(0, 50).map((event) => (
+                  <div key={event.id} className={styles.eventItem}>
+                    <span className={styles.eventTime}>
+                      T{event.tick}
+                    </span>
+                    <span className={styles.eventChar}>{event.characterName}</span>
+                    <span className={styles.eventDesc}>{event.description}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <ChatLog dialogues={dialogues} />
+          </div>
         </div>
       </div>
     </div>

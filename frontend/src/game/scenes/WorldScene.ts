@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { EventBus, GameEvents } from '../EventBus';
 import { CharacterSprite } from '../entities/CharacterSprite';
+import { SpeechBubble } from '../entities/SpeechBubble';
 
 interface AddCharacterData {
   id: string;
@@ -21,8 +22,14 @@ interface MoveCharacterData {
  * Renders the world grid, manages character sprites,
  * and communicates with React via EventBus.
  */
+interface SpeechBubbleData {
+  characterId: string;
+  text: string;
+}
+
 export class WorldScene extends Phaser.Scene {
   private characterSprites: Map<string, CharacterSprite> = new Map();
+  private speechBubbles: Map<string, SpeechBubble> = new Map();
   private gridGraphics!: Phaser.GameObjects.Graphics;
 
   // World dimensions in pixels
@@ -45,7 +52,13 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(_time: number, _delta: number): void {
-    // Future: update character animations, particles, etc.
+    // Keep speech bubbles following their characters
+    this.speechBubbles.forEach((bubble, charId) => {
+      const sprite = this.characterSprites.get(charId);
+      if (sprite) {
+        bubble.follow(sprite.x, sprite.y);
+      }
+    });
   }
 
   // -- Setup --
@@ -178,11 +191,21 @@ export class WorldScene extends Phaser.Scene {
       this,
     );
 
+    // React -> Phaser: Show a speech bubble above a character
+    EventBus.on(
+      GameEvents.SHOW_SPEECH_BUBBLE,
+      (data: SpeechBubbleData) => {
+        this.showSpeechBubble(data.characterId, data.text);
+      },
+      this,
+    );
+
     // Clean up listeners when scene shuts down
     this.events.on('shutdown', () => {
       EventBus.off(GameEvents.ADD_CHARACTER);
       EventBus.off(GameEvents.MOVE_CHARACTER);
       EventBus.off(GameEvents.REMOVE_CHARACTER);
+      EventBus.off(GameEvents.SHOW_SPEECH_BUBBLE);
     });
   }
 
@@ -216,5 +239,26 @@ export class WorldScene extends Phaser.Scene {
       sprite.destroy();
       this.characterSprites.delete(id);
     }
+    // Also clean up associated speech bubble
+    const bubble = this.speechBubbles.get(id);
+    if (bubble) {
+      bubble.destroy();
+      this.speechBubbles.delete(id);
+    }
+  }
+
+  private showSpeechBubble(characterId: string, text: string): void {
+    const sprite = this.characterSprites.get(characterId);
+    if (!sprite) return;
+
+    let bubble = this.speechBubbles.get(characterId);
+    if (!bubble) {
+      bubble = new SpeechBubble(this, sprite.x, sprite.y);
+      this.add.existing(bubble as unknown as Phaser.GameObjects.GameObject);
+      this.speechBubbles.set(characterId, bubble);
+    }
+
+    bubble.follow(sprite.x, sprite.y);
+    bubble.show(text);
   }
 }

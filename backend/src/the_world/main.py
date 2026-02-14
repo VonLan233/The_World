@@ -37,6 +37,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Shutdown
     sim_manager.shutdown_all()
+
+    # Close AI clients
+    from the_world.ai.tier2_ollama import close_client as close_ollama_client
+
+    await close_ollama_client()
+
     logger.info("The World is shutting down.")
 
 

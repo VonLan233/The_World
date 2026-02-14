@@ -12,7 +12,15 @@ export type {
   SimulationEventType,
   ClockState,
   CharacterStateUpdate,
+  RelationshipUpdateData,
 } from './simulation';
+
+export type {
+  Relationship,
+  RelationshipSummary,
+  RelationshipListResponse,
+  RelationshipType,
+} from './relationship';
 
 export type {
   WSClientMessage,

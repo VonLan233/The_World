@@ -91,9 +91,11 @@ class SimulationEngine:
         self.running = False
         self._task: asyncio.Task[None] | None = None
 
-        # Callbacks invoked on every tick / event
+        # Callbacks invoked on every tick / event / encounter
         self._on_tick: list[EventCallback] = []
         self._on_event: list[EventCallback] = []
+        self._on_encounter: list[EventCallback] = []
+        self._encounter_counter: int = 0
 
     # ------------------------------------------------------------------
     # Location management
@@ -185,6 +187,10 @@ class SimulationEngine:
     def on_event(self, cb: EventCallback) -> None:
         self._on_event.append(cb)
 
+    def on_encounter(self, cb: EventCallback) -> None:
+        """Register a callback invoked periodically to check for encounters."""
+        self._on_encounter.append(cb)
+
     # ------------------------------------------------------------------
     # Main loop
     # ------------------------------------------------------------------
@@ -204,6 +210,11 @@ class SimulationEngine:
                         for csim in self.characters.values():
                             is_sleeping = csim.current_activity == "sleep"
                             csim.needs.decay(1, csim.personality, is_sleeping)
+
+                    # Check for encounters periodically
+                    self._encounter_counter += 1
+                    if self._encounter_counter % 10 == 0:
+                        await self._check_encounters()
 
                     # Broadcast state
                     await self._broadcast_tick()
@@ -226,6 +237,15 @@ class SimulationEngine:
             except Exception:
                 logger.exception("Error in tick callback")
 
+    async def _check_encounters(self) -> None:
+        """Invoke encounter callbacks with the current tick."""
+        payload = {"tick": self.clock.tick}
+        for cb in self._on_encounter:
+            try:
+                await cb(payload)
+            except Exception:
+                logger.exception("Error in encounter callback")
+
     async def _emit_event(self, event: dict[str, Any]) -> None:
         for cb in self._on_event:
             try:
@@ -243,11 +263,18 @@ class SimulationEngine:
             if csim.id not in self.characters:
                 return  # character removed
 
+            nearby = [
+                {"id": o.id, "name": o.name}
+                for o in self.characters.values()
+                if o.id != csim.id and o.current_location == csim.current_location
+            ]
+
             activity, destination = choose_activity(
                 csim.needs,
                 csim.personality,
                 csim.current_location_type,
                 self._loc_name_to_type,
+                nearby_characters=nearby if nearby else None,
             )
 
             # Handle walk_to
