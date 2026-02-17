@@ -14,6 +14,7 @@ import simpy
 from the_world.simulation.activities import IDLE, SLEEP, WALK_TO, Activity
 from the_world.simulation.autonomy import choose_activity
 from the_world.simulation.clock import GameClock
+from the_world.simulation.event_scheduler import EventScheduler
 from the_world.simulation.needs import NeedsManager
 
 logger = logging.getLogger("the_world.simulation")
@@ -96,6 +97,12 @@ class SimulationEngine:
         self._on_event: list[EventCallback] = []
         self._on_encounter: list[EventCallback] = []
         self._encounter_counter: int = 0
+
+        # Random event system
+        self.event_scheduler = EventScheduler(clock=self.clock)
+        self._event_check_counter: int = 0
+        self._enable_random_events: bool = True
+        self._character_birthdays: dict[str, int] = {}
 
     # ------------------------------------------------------------------
     # Location management
@@ -216,6 +223,14 @@ class SimulationEngine:
                     if self._encounter_counter % 10 == 0:
                         await self._check_encounters()
 
+                    # Check for random events
+                    self._event_check_counter += 1
+                    if (
+                        self._enable_random_events
+                        and self._event_check_counter % self.event_scheduler.check_interval_ticks == 0
+                    ):
+                        await self._check_random_events()
+
                     # Broadcast state
                     await self._broadcast_tick()
 
@@ -230,6 +245,7 @@ class SimulationEngine:
             "worldId": self.world_id,
             "clock": self.clock.to_clock_state(),
             "characters": [c.to_state_update() for c in self.characters.values()],
+            "weather": self.event_scheduler.weather.to_dict(),
         }
         for cb in self._on_tick:
             try:
@@ -252,6 +268,25 @@ class SimulationEngine:
                 await cb(event)
             except Exception:
                 logger.exception("Error in event callback")
+
+    # ------------------------------------------------------------------
+    # Random events
+    # ------------------------------------------------------------------
+
+    async def _check_random_events(self) -> None:
+        """Run the event scheduler and emit any triggered events."""
+        events = self.event_scheduler.check_and_fire(
+            characters=self.characters,
+            locations=self.locations,
+            loc_name_to_type=self._loc_name_to_type,
+            character_birthdays=self._character_birthdays,
+        )
+        for event in events:
+            await self._emit_event(event)
+
+    def set_character_birthday(self, char_id: str, birth_day: int) -> None:
+        """Register a character's birthday (game-day number)."""
+        self._character_birthdays[char_id] = birth_day
 
     # ------------------------------------------------------------------
     # Character life-loop (SimPy process)
@@ -348,4 +383,5 @@ class SimulationEngine:
             "characters": [c.to_state_update() for c in self.characters.values()],
             "paused": self.paused,
             "speed": self.time_scale,
+            "weather": self.event_scheduler.weather.to_dict(),
         }

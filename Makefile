@@ -1,20 +1,23 @@
-.PHONY: help dev up down build test lint format migrate
+.PHONY: help start dev up down build test lint format migrate
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Docker commands
+start: ## One-click start (creates .env, builds, and launches)
+	@bash start.sh
+
 up: ## Start all services with Docker Compose
-	docker-compose up -d
+	docker compose up -d
 
 down: ## Stop all services
-	docker-compose down
+	docker compose down
 
 build: ## Build all Docker images
-	docker-compose build
+	docker compose build
 
 logs: ## Show logs from all services
-	docker-compose logs -f
+	docker compose logs -f
 
 # Backend commands
 backend-install: ## Install backend dependencies
@@ -37,19 +40,19 @@ backend-typecheck: ## Type check backend code
 
 # Frontend commands
 frontend-install: ## Install frontend dependencies
-	cd frontend && pnpm install
+	cd frontend && npm install
 
 frontend-dev: ## Run frontend in development mode
-	cd frontend && pnpm dev
+	cd frontend && npm run dev
 
 frontend-test: ## Run frontend tests
-	cd frontend && pnpm test
+	cd frontend && npm test
 
 frontend-lint: ## Lint frontend code
-	cd frontend && pnpm lint
+	cd frontend && npm run lint
 
 frontend-build: ## Build frontend for production
-	cd frontend && pnpm build
+	cd frontend && npm run build
 
 # Database commands
 migrate: ## Run database migrations

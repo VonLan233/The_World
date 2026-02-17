@@ -103,7 +103,7 @@ async def seed_default_world(db: AsyncSession, owner_id: uuid.UUID) -> World:
             "tickRate": 1000,
             "dayLength": 1440,
             "seasonLength": 28,
-            "enableWeather": False,
+            "enableWeather": True,
             "enableRandomEvents": True,
             "difficultyModifier": 1.0,
         },

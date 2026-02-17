@@ -60,6 +60,11 @@ class GameClock:
         return SEASONS[self._season_index]
 
     @property
+    def day_of_season(self) -> int:
+        """1-indexed day within the current season (1-28)."""
+        return ((self._day - 1) % DAYS_PER_SEASON) + 1
+
+    @property
     def is_daytime(self) -> bool:
         """06:00 – 21:59 is daytime."""
         return 6 <= self._hour < 22

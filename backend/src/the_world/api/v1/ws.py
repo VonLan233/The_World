@@ -99,6 +99,7 @@ async def simulation_ws(websocket: WebSocket, world_id: str) -> None:
                             "type": "world_state",
                             "characters": state["characters"],
                             "clock": state["clock"],
+                            "weather": state.get("weather", {}),
                         })
 
             elif msg_type == "toggle_simulation":
@@ -162,13 +163,15 @@ def register_engine_callbacks(world_id: str, engine: Any) -> None:
     """Wire up engine tick/event callbacks to broadcast via WebSocket."""
 
     async def on_tick(payload: dict[str, Any]) -> None:
-        # Broadcast character updates + clock to all connected clients
+        # Broadcast character updates + clock + weather to all connected clients
         characters = payload.get("characters", [])
         clock = payload.get("clock", {})
+        weather = payload.get("weather", {})
 
         await connection_manager.broadcast(world_id, {
             "type": "clock_update",
             "clock": clock,
+            "weather": weather,
         })
         for char_update in characters:
             await connection_manager.broadcast(world_id, {
@@ -177,11 +180,12 @@ def register_engine_callbacks(world_id: str, engine: Any) -> None:
             })
 
     async def on_event(event: dict[str, Any]) -> None:
+        event_type = event.get("type", "unknown")
         await connection_manager.broadcast(world_id, {
             "type": "simulation_event",
             "event": {
                 "id": str(__import__("uuid").uuid4()),
-                "type": event.get("type", "unknown"),
+                "type": event_type,
                 "characterId": event.get("characterId", ""),
                 "characterName": event.get("characterName", ""),
                 "description": event.get("description", ""),
@@ -190,6 +194,35 @@ def register_engine_callbacks(world_id: str, engine: Any) -> None:
                 "data": event.get("data", {}),
             },
         })
+
+        # Persist memory-worthy random/birthday/seasonal events
+        data = event.get("data", {})
+        if (
+            event_type in ("random_event", "birthday_event", "seasonal_event")
+            and data.get("memoryWorthy")
+            and event.get("characterId")
+        ):
+            try:
+                from the_world.ai.memory import MemoryManager
+
+                async with async_session_factory() as session:
+                    mm = MemoryManager(session)
+                    await mm.create_memory(
+                        character_id=event["characterId"],
+                        memory_type="random_event",
+                        content=event.get("description", ""),
+                        sim_timestamp=event.get("tick", 0),
+                        importance=data.get("memoryImportance", 0.5),
+                        emotional_valence=data.get("memoryValence", 0.0),
+                        context={
+                            "eventId": data.get("eventId"),
+                            "category": data.get("category"),
+                            "title": data.get("title"),
+                        },
+                    )
+                    await session.commit()
+            except Exception:
+                logger.exception("Failed to persist random event memory")
 
     # -- AI encounter callback --
     from the_world.ai.integration import AIIntegration
