@@ -13,11 +13,12 @@ from datetime import date
 from the_world.ai.personality import build_interaction_prompt, build_system_prompt
 from the_world.ai.types import AIContext, AIResponse, AITier
 from the_world.config import settings
+from the_world.db.redis import get_redis
 
 logger = logging.getLogger("the_world.ai.claude")
 
 # ---------------------------------------------------------------------------
-# Budget tracking (in-memory, resets daily)
+# Budget tracking (in-memory fallback, resets daily)
 # ---------------------------------------------------------------------------
 _daily_usage: dict[str, int] = {}
 _usage_date: date | None = None
@@ -34,12 +35,25 @@ def _ensure_date() -> None:
         _usage_date = today
 
 
-def check_budget(user_id: str) -> bool:
+async def check_budget(user_id: str) -> bool:
+    r = await get_redis()
+    if r is not None:
+        key = f"budget:claude:{user_id}:{date.today().isoformat()}"
+        usage = await r.get(key)
+        return int(usage or 0) < DAILY_BUDGET
+
     _ensure_date()
     return _daily_usage.get(user_id, 0) < DAILY_BUDGET
 
 
-def consume_budget(user_id: str) -> None:
+async def consume_budget(user_id: str) -> None:
+    r = await get_redis()
+    if r is not None:
+        key = f"budget:claude:{user_id}:{date.today().isoformat()}"
+        await r.incr(key)
+        await r.expire(key, 86400)  # 24h TTL
+        return
+
     _ensure_date()
     _daily_usage[user_id] = _daily_usage.get(user_id, 0) + 1
 
@@ -101,7 +115,7 @@ async def generate_claude_response(ctx: AIContext, user_id: str) -> AIResponse:
     )
 
     dialogue = message.content[0].text.strip()
-    consume_budget(user_id)
+    await consume_budget(user_id)
 
     return AIResponse(
         dialogue=dialogue,

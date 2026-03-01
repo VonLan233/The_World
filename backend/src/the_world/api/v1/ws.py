@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid as uuid_mod
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 from starlette.websockets import WebSocketState
 
 from the_world.db.session import async_session_factory
+from the_world.models.character import Character
+from the_world.models.world import Location
 from the_world.services.simulation_manager import SimulationManager
 
 logger = logging.getLogger("the_world.ws")
@@ -90,17 +94,64 @@ async def simulation_ws(websocket: WebSocket, world_id: str) -> None:
                 await websocket.send_json({"type": "pong"})
 
             elif msg_type == "join_world":
-                # Send current state snapshot
+                # Ensure engine exists and is populated with locations
                 if sim_manager:
-                    engine = sim_manager.get_engine(world_id)
-                    if engine:
-                        state = engine.get_state()
-                        await websocket.send_json({
-                            "type": "world_state",
-                            "characters": state["characters"],
-                            "clock": state["clock"],
-                            "weather": state.get("weather", {}),
-                        })
+                    engine = sim_manager.get_or_create_engine(world_id)
+
+                    # Load locations from DB if engine has none
+                    if not engine.locations:
+                        try:
+                            async with async_session_factory() as db_sess:
+                                result = await db_sess.execute(
+                                    select(Location).where(
+                                        Location.world_id == uuid_mod.UUID(world_id)
+                                    )
+                                )
+                                for loc in result.scalars().all():
+                                    engine.add_location(
+                                        name=loc.name,
+                                        location_type=loc.location_type,
+                                        position_x=loc.position_x,
+                                        position_y=loc.position_y,
+                                        available_activities=loc.available_activities,
+                                    )
+                        except Exception:
+                            logger.exception("Failed to load locations for world %s", world_id)
+
+                    # Restore latest snapshot if engine has no characters
+                    if not engine.characters:
+                        try:
+                            from the_world.models.snapshot import SimulationSnapshot
+
+                            async with async_session_factory() as db_sess:
+                                result = await db_sess.execute(
+                                    select(SimulationSnapshot)
+                                    .where(SimulationSnapshot.world_id == uuid_mod.UUID(world_id))
+                                    .order_by(SimulationSnapshot.tick.desc())
+                                    .limit(1)
+                                )
+                                snap = result.scalar_one_or_none()
+                                if snap:
+                                    engine.restore_from_snapshot(snap.state_data)
+                                    logger.info(
+                                        "Restored snapshot at tick %d for world %s",
+                                        snap.tick,
+                                        world_id,
+                                    )
+                        except Exception:
+                            logger.exception("Failed to restore snapshot for world %s", world_id)
+
+                    # Register callbacks if not yet registered
+                    if not engine._on_tick:
+                        register_engine_callbacks(world_id, engine)
+
+                    state = engine.get_state()
+                    await websocket.send_json({
+                        "type": "world_state",
+                        "characters": state["characters"],
+                        "clock": state["clock"],
+                        "weather": state.get("weather", {}),
+                    })
 
             elif msg_type == "toggle_simulation":
                 if sim_manager:
@@ -125,17 +176,37 @@ async def simulation_ws(websocket: WebSocket, world_id: str) -> None:
                 char_id = msg.get("characterId")
                 if char_id and sim_manager:
                     engine = sim_manager.get_or_create_engine(world_id)
-                    # For now use a placeholder name/personality — the full
-                    # version will load from DB
                     if char_id not in engine.characters:
-                        name = msg.get("characterName", "Character")
-                        personality = msg.get("personality", {
+                        # Load real character data from DB
+                        name = "Character"
+                        personality = {
                             "openness": 0.5,
                             "conscientiousness": 0.5,
                             "extraversion": 0.5,
                             "agreeableness": 0.5,
                             "neuroticism": 0.5,
-                        })
+                        }
+                        try:
+                            async with async_session_factory() as db_sess:
+                                result = await db_sess.execute(
+                                    select(Character).where(
+                                        Character.id == uuid_mod.UUID(char_id)
+                                    )
+                                )
+                                char_row = result.scalar_one_or_none()
+                                if char_row:
+                                    name = char_row.name
+                                    raw = char_row.personality or {}
+                                    personality = {
+                                        "openness": raw.get("openness", 50) / 100,
+                                        "conscientiousness": raw.get("conscientiousness", 50) / 100,
+                                        "extraversion": raw.get("extraversion", 50) / 100,
+                                        "agreeableness": raw.get("agreeableness", 50) / 100,
+                                        "neuroticism": raw.get("neuroticism", 50) / 100,
+                                    }
+                        except Exception:
+                            logger.exception("Failed to load character %s from DB", char_id)
+
                         engine.add_character(char_id, name, personality)
                         await connection_manager.broadcast(world_id, {
                             "type": "character_joined",
@@ -167,6 +238,25 @@ def register_engine_callbacks(world_id: str, engine: Any) -> None:
         characters = payload.get("characters", [])
         clock = payload.get("clock", {})
         weather = payload.get("weather", {})
+
+        # Auto-snapshot every 500 ticks
+        tick = clock.get("currentTick", 0)
+        if tick > 0 and tick % 500 == 0:
+            try:
+                from the_world.models.snapshot import SimulationSnapshot
+
+                snapshot_data = engine.to_snapshot()
+                async with async_session_factory() as sess:
+                    snap = SimulationSnapshot(
+                        world_id=uuid_mod.UUID(world_id),
+                        tick=tick,
+                        state_data=snapshot_data,
+                    )
+                    sess.add(snap)
+                    await sess.commit()
+                logger.info("Saved snapshot at tick %d for world %s", tick, world_id)
+            except Exception:
+                logger.exception("Failed to save snapshot at tick %d", tick)
 
         await connection_manager.broadcast(world_id, {
             "type": "clock_update",

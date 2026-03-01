@@ -68,7 +68,7 @@ def classify_interaction(
 async def resolve_tier(desired: AITier, user_id: str) -> AITier:
     """Walk the degradation chain: T1 → T2 → T3."""
     if desired == AITier.TIER1_CLAUDE:
-        if is_claude_available() and check_budget(user_id):
+        if is_claude_available() and await check_budget(user_id):
             return AITier.TIER1_CLAUDE
         # degrade to T2
         desired = AITier.TIER2_OLLAMA

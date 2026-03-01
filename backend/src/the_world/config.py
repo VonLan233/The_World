@@ -46,3 +46,8 @@ class Settings(BaseSettings):
 
 # Module-level singleton so the rest of the app can just import it.
 settings = Settings()
+
+if settings.APP_ENV != "development" and settings.JWT_SECRET_KEY == "CHANGE-ME-IN-PRODUCTION":
+    raise RuntimeError(
+        "FATAL: JWT_SECRET_KEY must be changed for non-development environments."
+    )

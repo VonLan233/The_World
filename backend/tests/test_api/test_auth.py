@@ -3,6 +3,8 @@
 import pytest
 from httpx import AsyncClient
 
+from the_world.api.v1.auth import _login_attempts
+
 
 # ---------------------------------------------------------------------------
 # Registration
@@ -155,3 +157,72 @@ async def test_get_me_unauthenticated(client: AsyncClient) -> None:
     """GET /api/v1/auth/me without a token returns 401."""
     resp = await client.get("/api/v1/auth/me")
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Password strength validation
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_register_weak_password_no_uppercase(client: AsyncClient) -> None:
+    """Password without uppercase letters should return 422."""
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={"username": "weakuser1", "email": "weak1@test.com", "password": "alllower1"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_register_weak_password_no_lowercase(client: AsyncClient) -> None:
+    """Password without lowercase letters should return 422."""
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={"username": "weakuser2", "email": "weak2@test.com", "password": "ALLUPPER1"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_register_weak_password_no_digit(client: AsyncClient) -> None:
+    """Password without digits should return 422."""
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={"username": "weakuser3", "email": "weak3@test.com", "password": "NoDigitsHere"},
+    )
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_login_rate_limit(client: AsyncClient) -> None:
+    """6 consecutive login attempts should trigger 429."""
+    _login_attempts.clear()
+
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "ratelimit_user",
+            "email": "ratelimit@test.com",
+            "password": "GoodPass1!",
+        },
+    )
+
+    for _ in range(5):
+        await client.post(
+            "/api/v1/auth/login",
+            data={"username": "ratelimit_user", "password": "WrongPass1!"},
+        )
+
+    # 6th attempt should be rate limited
+    resp = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "ratelimit_user", "password": "GoodPass1!"},
+    )
+    assert resp.status_code == 429
+    assert "Too many login attempts" in resp.json()["detail"]
+
+    _login_attempts.clear()

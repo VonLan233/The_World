@@ -1,0 +1,95 @@
+.section {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-md);
+}
+
+.clockInfo {
+  margin-bottom: var(--space-md);
+}
+
+.clockMain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.clockTimeDisplay {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.clockDayDisplay {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.toggleBtn {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--color-accent-primary);
+  color: white;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  background-color: #8f6fd4;
+}
+
+.toggleRunning {
+  background-color: var(--color-warning);
+}
+
+.toggleRunning:hover {
+  background-color: #e09500;
+}
+
+.speedControls {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.speedBtn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.speedBtn:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-border);
+}
+
+.speedActive {
+  color: white;
+  background-color: var(--color-accent-primary);
+}
+
+.speedActive:hover {
+  background-color: var(--color-accent-primary);
+}

@@ -1,9 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '@/api/client';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import CharacterCard from '@/components/character/CharacterCard';
 import type { Character } from '@shared/types/character';
 import styles from './DashboardPage.module.css';
+
+interface WorldInfo {
+  id: string;
+  name: string;
+}
 
 /**
  * User dashboard: lists the user's characters and allows creation of new ones.
@@ -11,13 +17,23 @@ import styles from './DashboardPage.module.css';
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { characters, isLoading, error, fetchCharacters } = useCharacterStore();
+  const [worlds, setWorlds] = useState<WorldInfo[]>([]);
 
   useEffect(() => {
     fetchCharacters();
+    apiClient.get<WorldInfo[]>('/worlds').then((res) => setWorlds(res.data)).catch(() => {});
   }, [fetchCharacters]);
 
-  const handleCharacterClick = (character: Character) => {
-    navigate(`/world/default`, { state: { characterId: character.id } });
+  const handleCharacterClick = async (character: Character) => {
+    let worldId: string;
+    if (worlds.length > 0) {
+      worldId = worlds[0].id;
+    } else {
+      const res = await apiClient.post<WorldInfo>('/worlds/');
+      worldId = res.data.id;
+      setWorlds([res.data]);
+    }
+    navigate(`/world/${worldId}`, { state: { characterId: character.id } });
   };
 
   return (

@@ -1,5 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
+import ToastContainer from '@/components/feedback/Toast';
+import ConnectionStatus from '@/components/feedback/ConnectionStatus';
 
 /**
  * Main layout wrapper.
@@ -24,6 +26,8 @@ export default function MainLayout() {
       >
         <Outlet />
       </main>
+      <ConnectionStatus />
+      <ToastContainer />
     </div>
   );
 }

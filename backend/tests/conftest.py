@@ -68,6 +68,10 @@ def _set_sqlite_pragma(dbapi_conn, _connection_record):
 @pytest.fixture(autouse=True)
 async def _setup_db() -> AsyncIterator[None]:
     """Create all tables before each test and drop them after."""
+    # Clear login rate limiter between tests
+    from the_world.api.v1.auth import _login_attempts
+    _login_attempts.clear()
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

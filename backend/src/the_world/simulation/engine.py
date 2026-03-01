@@ -51,6 +51,38 @@ class CharacterSim:
             "position": {"x": self.position_x, "y": self.position_y},
         }
 
+    def to_snapshot(self) -> dict[str, Any]:
+        """Serialise character state for persistence."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "personality": self.personality,
+            "needs": self.needs.to_dict(),
+            "current_activity": self.current_activity,
+            "current_location": self.current_location,
+            "current_location_type": self.current_location_type,
+            "position_x": self.position_x,
+            "position_y": self.position_y,
+        }
+
+    @classmethod
+    def from_snapshot(cls, data: dict[str, Any]) -> "CharacterSim":
+        """Restore a character from a persisted snapshot."""
+        csim = cls(
+            id=data["id"],
+            name=data["name"],
+            personality=data.get("personality", {}),
+        )
+        csim.current_activity = data.get("current_activity", "idle")
+        csim.current_location = data.get("current_location", "Home")
+        csim.current_location_type = data.get("current_location_type", "home")
+        csim.position_x = data.get("position_x", 100.0)
+        csim.position_y = data.get("position_y", 300.0)
+        needs = data.get("needs", {})
+        for k in ("hunger", "energy", "social", "fun", "hygiene", "comfort"):
+            setattr(csim.needs, k, needs.get(k, 50.0))
+        return csim
+
 
 # ---------------------------------------------------------------------------
 # Simulation engine
@@ -385,3 +417,45 @@ class SimulationEngine:
             "speed": self.time_scale,
             "weather": self.event_scheduler.weather.to_dict(),
         }
+
+    # ------------------------------------------------------------------
+    # Persistence
+    # ------------------------------------------------------------------
+
+    def to_snapshot(self) -> dict[str, Any]:
+        """Serialise full engine state for persistence."""
+        return {
+            "tick": self.clock.tick,
+            "time_scale": self.time_scale,
+            "paused": self.paused,
+            "characters": {cid: c.to_snapshot() for cid, c in self.characters.items()},
+            "weather": self.event_scheduler.weather.to_dict(),
+        }
+
+    def restore_from_snapshot(self, data: dict[str, Any]) -> None:
+        """Restore engine state from a persisted snapshot.
+
+        Characters are added but their SimPy processes are NOT started —
+        call ``start()`` to begin the simulation loop.
+        """
+        from the_world.simulation.events import WeatherState, WeatherType
+
+        self.clock.tick = data.get("tick", 0)
+        self.clock._recompute()
+        self.time_scale = data.get("time_scale", 1.0)
+        self.paused = data.get("paused", True)
+
+        for cid, cdata in data.get("characters", {}).items():
+            if cid not in self.characters:
+                csim = CharacterSim.from_snapshot(cdata)
+                self.characters[csim.id] = csim
+                # Start SimPy process so the character is active
+                self.env.process(self._character_loop(csim))
+
+        weather = data.get("weather", {})
+        if weather:
+            self.event_scheduler.weather = WeatherState(
+                current=WeatherType(weather.get("current", "clear")),
+                temperature_modifier=weather.get("temperatureModifier", 0.0),
+                changed_at_tick=weather.get("changedAtTick", 0),
+            )

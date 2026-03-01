@@ -3,6 +3,8 @@ import { getAuthToken } from './client';
 
 type EventCallback = (data: WSServerMessage) => void;
 
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
 /**
  * WebSocket client for real-time simulation communication.
  * Supports auto-reconnect, typed messaging, and event handling.
@@ -17,6 +19,25 @@ export class WebSocketClient {
   private shouldReconnect = false;
   private currentWorldId: string | null = null;
 
+  private _connectionState: ConnectionState = 'disconnected';
+  private _stateListeners: Set<(state: ConnectionState) => void> = new Set();
+
+  get connectionState(): ConnectionState {
+    return this._connectionState;
+  }
+
+  onStateChange(cb: (state: ConnectionState) => void): () => void {
+    this._stateListeners.add(cb);
+    return () => {
+      this._stateListeners.delete(cb);
+    };
+  }
+
+  private setConnectionState(state: ConnectionState): void {
+    this._connectionState = state;
+    this._stateListeners.forEach((cb) => cb(state));
+  }
+
   /**
    * Establish a WebSocket connection to a world simulation.
    */
@@ -24,6 +45,7 @@ export class WebSocketClient {
     this.currentWorldId = worldId;
     this.shouldReconnect = true;
     this.reconnectAttempts = 0;
+    this.setConnectionState('connecting');
     this.createConnection(worldId);
   }
 
@@ -43,6 +65,8 @@ export class WebSocketClient {
       this.ws.close(1000, 'Client disconnecting');
       this.ws = null;
     }
+
+    this.setConnectionState('disconnected');
   }
 
   /**
@@ -97,6 +121,7 @@ export class WebSocketClient {
     this.ws.onopen = () => {
       console.log(`[WS] Connected to world ${worldId}`);
       this.reconnectAttempts = 0;
+      this.setConnectionState('connected');
       this.emit({ type: 'pong' } as WSServerMessage); // Notify listeners of connection
     };
 
@@ -114,7 +139,10 @@ export class WebSocketClient {
       this.ws = null;
 
       if (this.shouldReconnect && event.code !== 1000) {
+        this.setConnectionState('reconnecting');
         this.scheduleReconnect();
+      } else {
+        this.setConnectionState('disconnected');
       }
     };
 

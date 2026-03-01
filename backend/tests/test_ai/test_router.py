@@ -94,7 +94,7 @@ class TestResolveTier:
     @pytest.mark.asyncio
     async def test_tier1_stays_when_available(self):
         with patch("the_world.ai.router.is_claude_available", return_value=True):
-            with patch("the_world.ai.router.check_budget", return_value=True):
+            with patch("the_world.ai.router.check_budget", AsyncMock(return_value=True)):
                 result = await resolve_tier(AITier.TIER1_CLAUDE, "user-1")
                 assert result == AITier.TIER1_CLAUDE
 
