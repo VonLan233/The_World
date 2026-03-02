@@ -55,9 +55,12 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
-        'Login failed. Please check your credentials.';
+      const raw = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+      const message = typeof raw === 'string'
+        ? raw
+        : Array.isArray(raw)
+          ? (raw as { msg?: string }[]).map((e) => e.msg).join('; ')
+          : 'Login failed. Please check your credentials.';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }
@@ -79,9 +82,12 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
-        'Registration failed. Please try again.';
+      const raw = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+      const message = typeof raw === 'string'
+        ? raw
+        : Array.isArray(raw)
+          ? (raw as { msg?: string }[]).map((e) => e.msg).join('; ')
+          : 'Registration failed. Please try again.';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }

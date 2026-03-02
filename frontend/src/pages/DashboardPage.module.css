@@ -43,7 +43,7 @@
 }
 
 .createBtn:hover {
-  background-color: #8f6fd4;
+  background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }

@@ -168,7 +168,7 @@
 .input:focus {
   outline: none;
   border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .inputError {
@@ -204,7 +204,7 @@
 }
 
 .submitBtn:hover:not(:disabled) {
-  background-color: #8f6fd4;
+  background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -246,7 +246,7 @@
 }
 
 .switchBtn:hover {
-  color: #8f6fd4;
+  color: #2563eb;
 }
 
 /* Responsive */

@@ -53,7 +53,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             style={{
               padding: '8px 20px',
               borderRadius: '6px',
-              background: '#7c5cbf',
+              background: '#3b82f6',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',

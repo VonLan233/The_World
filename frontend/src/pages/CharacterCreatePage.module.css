@@ -78,7 +78,7 @@
 }
 
 .authGuardBtn:hover {
-  background-color: #8f6fd4;
+  background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -329,13 +329,13 @@
   background: var(--color-accent-primary);
   border: 2px solid var(--color-bg-card);
   cursor: pointer;
-  box-shadow: 0 0 4px rgba(124, 92, 191, 0.4);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 0 8px rgba(124, 92, 191, 0.6);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
 }
 
 .slider::-moz-range-thumb {
@@ -541,7 +541,7 @@
 }
 
 .submitBtn:hover:not(:disabled) {
-  background-color: #8f6fd4;
+  background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }

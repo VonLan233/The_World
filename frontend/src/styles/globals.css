@@ -3,27 +3,27 @@
    ============================================ */
 
 :root {
-  /* Color palette */
-  --color-bg-primary: #0f0f13;
-  --color-bg-secondary: #1a1a24;
-  --color-bg-tertiary: #24243a;
-  --color-bg-card: #1e1e2e;
-  --color-bg-hover: #2a2a3e;
+  /* Color palette — clean dark */
+  --color-bg-primary: #09090b;
+  --color-bg-secondary: #18181b;
+  --color-bg-tertiary: #27272a;
+  --color-bg-card: #1c1c1f;
+  --color-bg-hover: #2c2c30;
 
-  --color-text-primary: #e4e4ef;
-  --color-text-secondary: #a0a0b8;
-  --color-text-muted: #6c6c80;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
 
-  --color-accent-primary: #7c5cbf;
-  --color-accent-secondary: #5b8def;
-  --color-accent-tertiary: #4ecdc4;
+  --color-accent-primary: #3b82f6;
+  --color-accent-secondary: #06b6d4;
+  --color-accent-tertiary: #10b981;
 
-  --color-success: #4caf50;
-  --color-warning: #f5a623;
-  --color-danger: #e74c3c;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
 
-  --color-border: #2e2e42;
-  --color-border-hover: #44446a;
+  --color-border: #27272a;
+  --color-border-hover: #3f3f46;
 
   /* Spacing */
   --space-xs: 0.25rem;
@@ -164,7 +164,7 @@ select:focus {
 }
 
 .btn-primary:hover {
-  background-color: #8f6fd4;
+  background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
