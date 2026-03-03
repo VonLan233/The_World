@@ -1,0 +1,94 @@
+
+================================================================
+              SIMULATION ANALYSIS REPORT
+================================================================
+
+  Real time : 45.0s
+  Game time : 1440 minutes (24h 0m)
+  Encounters: 1
+
+-- A. Activity Frequency --
+
+  Luna Brightwood  (10 activity changes, 4 unique)
+    deep_talk        ████████░░░░░░░░   5x (50.0%) [O]
+    meditate         █████░░░░░░░░░░░   3x (30.0%) [O]
+    sleep            ██░░░░░░░░░░░░░░   1x (10.0%)
+    eat              ██░░░░░░░░░░░░░░   1x (10.0%)
+
+  Marcus Steele  (14 activity changes, 6 unique)
+    deep_talk        ███████░░░░░░░░░   6x (42.9%) [O]
+    meditate         ██░░░░░░░░░░░░░░   2x (14.3%) [O]
+    study            ██░░░░░░░░░░░░░░   2x (14.3%) [O]
+    cook             ██░░░░░░░░░░░░░░   2x (14.3%)
+    sleep            █░░░░░░░░░░░░░░░   1x ( 7.1%)
+    work             █░░░░░░░░░░░░░░░   1x ( 7.1%)
+
+  Mei Chen  (9 activity changes, 5 unique)
+    deep_talk        █████████░░░░░░░   5x (55.6%) [O]
+    cook             ██░░░░░░░░░░░░░░   1x (11.1%)
+    study            ██░░░░░░░░░░░░░░   1x (11.1%) [O]
+    meditate         ██░░░░░░░░░░░░░░   1x (11.1%) [O]
+    sleep            ██░░░░░░░░░░░░░░   1x (11.1%)
+
+-- B. Location Preferences --
+
+  Luna  (1 locations, 0 moves)
+    Home               ████████████████ 100.0%  (1440 ticks)
+
+  Marcus  (1 locations, 0 moves)
+    Home               ████████████████ 100.0%  (1440 ticks)
+
+  Mei  (1 locations, 0 moves)
+    Home               ████████████████ 100.0%  (1440 ticks)
+
+-- C. Needs Summary --
+
+  Luna Brightwood
+    hunger    79.0 ->  82.0  (min= 33.0  avg= 56.5)
+    energy    98.5 ->  89.5  (min= 62.5  avg= 85.7)
+    social    69.6 ->  99.5  (min= 69.6  avg= 97.6)
+    fun       59.5 ->  99.4  (min= 59.5  avg= 96.8)
+    hygiene   89.7 ->  78.0  (min= 78.0  avg= 83.9)
+    comfort   69.6 ->  64.6  (min= 57.6  avg= 75.5)
+    mood     avg= 82.7  min= 77.6  max= 90.2
+
+  Marcus Steele
+    hunger    79.0 ->  72.0  (min= 45.0  avg= 66.3)
+    energy    98.5 ->  69.8  (min= 69.8  avg= 87.9)
+    social    68.9 ->  93.7  (min= 68.9  avg= 94.4)
+    fun       59.5 ->  97.8  (min= 59.5  avg= 94.7)
+    hygiene   89.7 ->  78.0  (min= 78.0  avg= 83.9)
+    comfort   69.7 ->  49.3  (min= 29.6  avg= 63.3)
+    mood     avg= 81.8  min= 73.5  max= 90.3
+
+  Mei Chen
+    hunger    79.0 ->  59.7  (min= 59.7  avg= 79.2)
+    energy    98.5 ->  95.3  (min= 57.4  avg= 81.9)
+    social    69.1 ->  99.5  (min= 69.1  avg= 95.5)
+    fun       59.5 ->  99.8  (min= 59.5  avg= 96.5)
+    hygiene   89.7 ->  78.0  (min= 78.0  avg= 83.9)
+    comfort   69.6 ->  28.1  (min= 28.1  avg= 53.6)
+    mood     avg= 81.8  min= 74.5  max= 90.2
+
+-- D. Character Comparison --
+
+  Metric               | Luna           | Marcus         | Mei           
+  -------------------- | -------------- | -------------- | --------------
+  Top Activity         | deep_talk      | deep_talk      | deep_talk     
+  2nd Activity         | meditate       | meditate       | cook          
+  3rd Activity         | sleep          | study          | study         
+  Top Location         | Home (100%)    | Home (100%)    | Home (100%)   
+  Avg Mood             | 82.7           | 81.8           | 81.8          
+  Activities Used      | 4              | 6              | 5             
+  Locations Visited    | 1              | 1              | 1             
+  Location Moves       | 0              | 0              | 0             
+
+-- E. Personality Validation --
+
+  Luna   (O=0.9, E=0.2): openness activities = 80%  -> PASS ✓
+  Marcus (C=0.8, E=0.9): social activities = 43%, home = 100%  -> PASS ✓
+  Mei    (balanced): unique activities = 5, unique locations = 1  -> WARN ✗
+
+  Result: 2/3 personality checks passed
+
+  No network requests. 100% local simulation.
