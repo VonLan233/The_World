@@ -2,7 +2,19 @@
 
 > 已完成: Phase 0 (项目骨架) + Phase 1 (角色系统) + Phase 2 (模拟引擎核心) + Phase 3 (AI集成) + Phase 4 (关系与社交)
 > 当前测试: 后端 152/152 通过, 前端 TypeScript 零错误
-> 更新日期: 2026-02-14
+> 更新日期: 2026-03-04
+
+---
+
+## P0 稳定性冲刺 (进行中)
+
+- [x] 盘点前后端核心 API 契约（auth/characters/worlds/simulation/relationships/ws）
+- [x] 修复高风险契约偏差：角色更新接口支持 `PUT/PATCH` 双方法兼容
+- [x] 补充后端回归测试：`PATCH /api/v1/characters/{id}`
+- [x] 扩展前端 store/API 层契约测试覆盖
+- [x] 最小链路联调验收（登录→创建角色→更新→进入世界→模拟控制）
+- [x] 输出 API 契约基线文档（docs/api_contract.md）
+- [x] 增加 OpenAPI 契约守卫测试（关键路径/方法不漂移）
 
 ---
 

@@ -145,13 +145,17 @@ async def get_character(
 
 
 @router.put("/{character_id}", response_model=CharacterResponse)
+@router.patch("/{character_id}", response_model=CharacterResponse)
 async def update_character(
     character_id: uuid.UUID,
     body: CharacterUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> CharacterResponse:
-    """Update a character (must be the owner)."""
+    """Update a character (must be the owner).
+
+    Supports both PUT and PATCH for frontend/backward compatibility.
+    """
     result = await db.execute(select(Character).where(Character.id == character_id))
     character = result.scalar_one_or_none()
     if character is None:

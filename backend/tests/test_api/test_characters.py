@@ -152,6 +152,27 @@ async def test_update_character(client: AsyncClient, auth_headers: dict[str, str
 
 
 @pytest.mark.asyncio
+async def test_patch_character(client: AsyncClient, auth_headers: dict[str, str]) -> None:
+    """PATCH /api/v1/characters/{id} updates partial fields (200)."""
+    create_resp = await client.post(
+        "/api/v1/characters/", json=SAMPLE_CHARACTER, headers=auth_headers
+    )
+    character_id = create_resp.json()["id"]
+
+    resp = await client.patch(
+        f"/api/v1/characters/{character_id}",
+        json={"description": "Updated via PATCH", "isPublic": False},
+        headers=auth_headers,
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["description"] == "Updated via PATCH"
+    assert data["isPublic"] is False
+    assert data["name"] == "Test Character"
+
+
+@pytest.mark.asyncio
 async def test_update_character_not_owner(client: AsyncClient, auth_headers: dict[str, str]) -> None:
     """User B cannot update User A's character (403)."""
     # User A (default test user) creates a character
