@@ -8,14 +8,21 @@ compatible with both PostgreSQL and SQLite dev mode.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import uuid as uuid_mod
 from typing import Any
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from the_world.ai.llm_utils import generate_text_llm
 from the_world.models.memory import Memory
+
+logger = logging.getLogger("the_world.ai.memory")
+
+# Accumulated importance sum that triggers a reflection pass.
+REFLECTION_THRESHOLD = 150.0
 
 
 def _to_uuid(value: str | uuid_mod.UUID) -> uuid_mod.UUID:
@@ -153,6 +160,78 @@ class MemoryManager:
             if ctx.get("target_character_id") == target_character_id:
                 count += 1
         return count
+
+    # ------------------------------------------------------------------
+    # Reflection (Phase 1 cognitive layer)
+    # ------------------------------------------------------------------
+
+    async def reflect(
+        self,
+        character_id: str,
+        character_name: str,
+        since_tick: int,
+        current_tick: int,
+    ) -> "Memory | None":
+        """Generate a high-level insight if accumulated importance is high enough.
+
+        Retrieves non-reflection memories created after *since_tick*, sums their
+        importance scores, and if the total meets ``REFLECTION_THRESHOLD``, calls
+        the LLM to distil a reflection.
+
+        Returns the new reflection ``Memory`` row, or ``None`` if the threshold
+        wasn't met or no LLM is available.
+        """
+        char_uuid = _to_uuid(character_id)
+        stmt = (
+            select(Memory)
+            .where(Memory.character_id == char_uuid)
+            .where(Memory.memory_type != "reflection")
+            .where(Memory.sim_timestamp > since_tick)
+            .order_by(Memory.sim_timestamp.desc())
+            .limit(50)
+        )
+        result = await self.db.execute(stmt)
+        memories = list(result.scalars().all())
+
+        if not memories:
+            return None
+
+        total_importance = sum(m.importance for m in memories)
+        if total_importance < REFLECTION_THRESHOLD:
+            return None
+
+        # Build a summarised list of recent memories for the LLM
+        mem_lines = [f"- [{m.memory_type}] {m.content}" for m in memories[:15]]
+        mem_text = "\n".join(mem_lines)
+
+        prompt = (
+            f"You are {character_name}. Review these recent memories:\n"
+            f"{mem_text}\n\n"
+            "Write a single insightful reflection (2-3 sentences) in first person "
+            "about what you've learned, noticed, or how you feel about your life "
+            "and relationships recently. Be specific and personal."
+        )
+
+        insight = await generate_text_llm(prompt, max_tokens=150)
+        if not insight:
+            return None
+
+        reflection = await self.create_memory(
+            character_id=character_id,
+            memory_type="reflection",
+            content=insight,
+            sim_timestamp=current_tick,
+            importance=0.9,
+            emotional_valence=0.1,
+            context={
+                "source_tick_range": [since_tick, current_tick],
+                "source_count": len(memories),
+            },
+        )
+        logger.info(
+            "Reflection generated for %s: %s…", character_name, insight[:80]
+        )
+        return reflection
 
     # ------------------------------------------------------------------
     # Prompt formatting

@@ -66,6 +66,7 @@ async def generate_ollama_response(ctx: AIContext) -> AIResponse:
         mood=ctx.mood,
         activity=ctx.current_activity,
         location=ctx.current_location,
+        world_lore=ctx.world_lore,
     )
 
     rel_context = f"score {ctx.relationship_score:.0f}" if ctx.relationship_score else ""

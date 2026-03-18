@@ -3,6 +3,13 @@ import { EventBus, GameEvents } from '../EventBus';
 import { CharacterSprite } from '../entities/CharacterSprite';
 import { SpeechBubble } from '../entities/SpeechBubble';
 
+/** Set before Phaser game creation to supply a custom map background URL. */
+let _pendingMapUrl: string | null = null;
+
+export function setWorldMapUrl(url: string | null): void {
+  _pendingMapUrl = url;
+}
+
 interface AddCharacterData {
   id: string;
   name: string;
@@ -31,6 +38,7 @@ export class WorldScene extends Phaser.Scene {
   private characterSprites: Map<string, CharacterSprite> = new Map();
   private speechBubbles: Map<string, SpeechBubble> = new Map();
   private gridGraphics!: Phaser.GameObjects.Graphics;
+  private mapUrl: string | null = null;
 
   // World dimensions in pixels
   private worldWidth = 2048;
@@ -39,6 +47,14 @@ export class WorldScene extends Phaser.Scene {
 
   constructor() {
     super({ key: 'WorldScene' });
+    // Read the pending map URL set by React before Phaser game creation
+    this.mapUrl = _pendingMapUrl;
+  }
+
+  preload(): void {
+    if (this.mapUrl) {
+      this.load.image('worldMap', this.mapUrl);
+    }
   }
 
   create(): void {
@@ -64,8 +80,26 @@ export class WorldScene extends Phaser.Scene {
   // -- Setup --
 
   private createGrid(): void {
+    // Custom map background — stretches to fill world bounds
+    if (this.mapUrl && this.textures.exists('worldMap')) {
+      this.add
+        .image(this.worldWidth / 2, this.worldHeight / 2, 'worldMap')
+        .setDisplaySize(this.worldWidth, this.worldHeight)
+        .setDepth(-10);
+    } else {
+      // Default solid background
+      const bg = this.add.rectangle(
+        this.worldWidth / 2,
+        this.worldHeight / 2,
+        this.worldWidth,
+        this.worldHeight,
+        0x0f0f13,
+      );
+      bg.setDepth(-10);
+    }
+
     this.gridGraphics = this.add.graphics();
-    this.gridGraphics.lineStyle(1, 0x1a1a24, 0.5);
+    this.gridGraphics.lineStyle(1, 0x1a1a24, this.mapUrl ? 0.2 : 0.5);
 
     // Draw vertical lines
     for (let x = 0; x <= this.worldWidth; x += this.tileSize) {
@@ -80,16 +114,6 @@ export class WorldScene extends Phaser.Scene {
     // Draw a subtle border around the world
     this.gridGraphics.lineStyle(2, 0x2e2e42, 0.8);
     this.gridGraphics.strokeRect(0, 0, this.worldWidth, this.worldHeight);
-
-    // Background fill
-    const bg = this.add.rectangle(
-      this.worldWidth / 2,
-      this.worldHeight / 2,
-      this.worldWidth,
-      this.worldHeight,
-      0x0f0f13,
-    );
-    bg.setDepth(-10);
 
     // Add some placeholder location zones
     this.createLocationZone(200, 200, 192, 128, 'Home', 0x7c5cbf);
@@ -153,8 +177,8 @@ export class WorldScene extends Phaser.Scene {
     });
 
     // Zoom with scroll wheel
-    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number[], _gy: number[], _gz: number[], _gw: number, _gh: number, event: WheelEvent) => {
-      const zoomDelta = event.deltaY > 0 ? -0.1 : 0.1;
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
+      const zoomDelta = deltaY > 0 ? -0.1 : 0.1;
       const newZoom = Phaser.Math.Clamp(cam.zoom + zoomDelta, 0.5, 3);
       cam.setZoom(newZoom);
     });

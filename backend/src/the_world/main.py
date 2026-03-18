@@ -1,11 +1,13 @@
 """FastAPI application factory for The World."""
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from the_world.api.v1.router import v1_router
 from the_world.config import settings
@@ -66,6 +68,11 @@ def create_app() -> FastAPI:
 
     # -- Routers --
     app.include_router(v1_router, prefix="/api/v1")
+
+    # -- Static file serving for user uploads --
+    uploads_dir = "/app/uploads"
+    os.makedirs(uploads_dir, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
     # -- Health check --
     @app.get("/health", tags=["infra"])

@@ -12,12 +12,20 @@ import SimulationEventLog from '@/components/simulation/SimulationEventLog';
 import type { CharacterNeeds } from '@shared/types/character';
 import type { CharacterStateUpdate } from '@shared/types/simulation';
 import styles from './WorldPage.module.css';
+import apiClient from '@/api/client';
+import { setWorldMapUrl } from '@/game/scenes/WorldScene';
 
 /**
  * Main simulation page.
  * Contains the Phaser game canvas (center), character info sidebar (right),
  * and event log panel (bottom).
  */
+interface WorldInfo {
+  id: string;
+  name: string;
+  map_url: string | null;
+}
+
 export default function WorldPage() {
   const { worldId } = useParams<{ worldId: string }>();
   const location = useLocation();
@@ -25,6 +33,19 @@ export default function WorldPage() {
   const gameRef = useRef<PhaserGameRef>(null);
   const [speed, setSpeed] = useState(1);
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
+  const [gameReady, setGameReady] = useState(false);
+
+  // Load world data and set map URL before Phaser game is created
+  useEffect(() => {
+    if (!worldId) { setGameReady(true); return; }
+    apiClient.get<WorldInfo>(`/worlds/${worldId}`)
+      .then((res) => {
+        const mapUrl = res.data.map_url;
+        setWorldMapUrl(mapUrl ? `${window.location.origin}${mapUrl}` : null);
+      })
+      .catch(() => { setWorldMapUrl(null); })
+      .finally(() => { setGameReady(true); });
+  }, [worldId]);
 
   useWorldSocket(worldId, characterId);
 
@@ -86,7 +107,7 @@ export default function WorldPage() {
     <div className={styles.page}>
       <div className={styles.main}>
         <div className={styles.gameArea}>
-          <PhaserGame ref={gameRef} onSceneReady={handleSceneReady} />
+          {gameReady && <PhaserGame ref={gameRef} onSceneReady={handleSceneReady} />}
         </div>
 
         <aside className={styles.sidebar}>

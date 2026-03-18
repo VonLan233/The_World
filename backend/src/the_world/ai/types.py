@@ -45,6 +45,7 @@ class AIContext:
     relationship_score: float = 0.0
     memories: list[str] = field(default_factory=list)
     sim_tick: int = 0
+    world_lore: str = ""
 
 
 @dataclass

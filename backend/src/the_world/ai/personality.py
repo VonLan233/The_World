@@ -97,10 +97,11 @@ def build_system_prompt(
     mood: str,
     activity: str,
     location: str,
+    world_lore: str = "",
 ) -> str:
     """Generate a character-specific LLM system prompt."""
     bp = personality_to_behavior(personality)
-    return (
+    prompt = (
         f"You are {name}, a character in a life-simulation world.\n"
         f"Personality: {bp.speech_style}; {bp.social_tendency}; "
         f"{bp.emotional_range}; {bp.decision_style}; {bp.curiosity_level}.\n"
@@ -108,6 +109,9 @@ def build_system_prompt(
         "Stay in character. Respond with a single short line of dialogue (1-2 sentences). "
         "Do NOT include action descriptions or quotation marks."
     )
+    if world_lore:
+        prompt += f"\n\nWorld Setting:\n{world_lore[:1500]}"
+    return prompt
 
 
 def build_interaction_prompt(

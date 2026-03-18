@@ -15,6 +15,7 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
   error: string | null;
 }
 
@@ -32,6 +33,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   token: localStorage.getItem('the_world_token'),
   isAuthenticated: !!localStorage.getItem('the_world_token'),
   isLoading: false,
+  isInitializing: !!localStorage.getItem('the_world_token'),
   error: null,
 
   // Actions
@@ -110,15 +112,15 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     set({ isLoading: true });
     try {
       const response = await apiClient.get<User>('/auth/me');
-      set({ user: response.data, isAuthenticated: true, isLoading: false });
+      set({ user: response.data, isAuthenticated: true, isLoading: false, isInitializing: false });
     } catch {
-      clearAuthToken();
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
+      // Only clear if the token hasn't been replaced by a concurrent login
+      if (get().token === token) {
+        clearAuthToken();
+        set({ user: null, token: null, isAuthenticated: false, isLoading: false, isInitializing: false });
+      } else {
+        set({ isLoading: false, isInitializing: false });
+      }
     }
   },
 

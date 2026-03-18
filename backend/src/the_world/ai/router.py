@@ -89,11 +89,39 @@ async def generate_response(
     ctx: AIContext,
     user_id: str = "system",
     interaction_count: int = 0,
+    world_ai_settings: dict | None = None,
 ) -> AIResponse:
     """Generate an AI response using the three-step pipeline.
 
+    If *world_ai_settings* contains a configured text_provider, it is used
+    in place of the server-wide tier system.
+
     Never raises — always falls back to the rules engine on error.
     """
+    # -- Per-world AI override --
+    if world_ai_settings:
+        provider = world_ai_settings.get("text_provider")
+        api_key = world_ai_settings.get("text_api_key", "")
+        model = world_ai_settings.get("text_model")
+        if provider and api_key:
+            try:
+                from the_world.ai.third_party import generate_text
+
+                prompt = _build_dialogue_prompt(ctx)
+                text = await generate_text(prompt, provider, api_key, model)
+                return AIResponse(
+                    dialogue=text,
+                    tier_used=AITier.TIER1_CLAUDE,  # treat as tier-1 quality
+                    memory_worthy=True,
+                    importance=0.7,
+                    emotional_valence=0.1,
+                )
+            except Exception:
+                logger.exception(
+                    "Third-party provider %r failed, falling back to standard tiers",
+                    provider,
+                )
+
     desired = classify_interaction(ctx.interaction_type, ctx.relationship_score, interaction_count)
     tier = await resolve_tier(desired, user_id)
 
@@ -107,3 +135,26 @@ async def generate_response(
 
     # Ultimate fallback — Tier 3 (never raises)
     return await generate_rules_response(ctx)
+
+
+def _build_dialogue_prompt(ctx: AIContext) -> str:
+    """Build a concise dialogue prompt from the AI context."""
+    parts = []
+    if ctx.world_lore:
+        parts.append(f"World Setting:\n{ctx.world_lore[:1500]}\n")
+    parts += [
+        f"You are {ctx.character_name}, a character with the following traits: "
+        f"openness={ctx.personality.get('openness', 0.5):.1f}, "
+        f"extraversion={ctx.personality.get('extraversion', 0.5):.1f}, "
+        f"agreeableness={ctx.personality.get('agreeableness', 0.5):.1f}.",
+        f"Current mood: {ctx.mood}. Activity: {ctx.current_activity}. "
+        f"Location: {ctx.current_location}.",
+        f"You are speaking to {ctx.target_name}.",
+    ]
+    if ctx.memories:
+        parts.append("Recent memories: " + "; ".join(ctx.memories[:3]))
+    parts.append(
+        "Write a single, in-character dialogue line (1-2 sentences). "
+        "No narration, no quotation marks around the full response."
+    )
+    return "\n".join(parts)

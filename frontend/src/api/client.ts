@@ -32,10 +32,13 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      // Redirect to home if not already there
-      if (window.location.pathname !== '/') {
-        window.location.href = '/';
+      const requestUrl: string = error.config?.url ?? '';
+      if (!requestUrl.startsWith('/auth/')) {
+        localStorage.removeItem(TOKEN_KEY);
+        // Redirect to home if not already there
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
       }
     }
     return Promise.reject(error);

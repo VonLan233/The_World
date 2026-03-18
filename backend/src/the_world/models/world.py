@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,9 @@ class World(Base):
     )
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     settings: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    lore: Mapped[str | None] = mapped_column(Text, nullable=True)
+    map_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    ai_settings: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

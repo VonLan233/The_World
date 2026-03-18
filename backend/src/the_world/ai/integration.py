@@ -2,6 +2,11 @@
 
 Detects character encounters based on co-location, builds AI contexts,
 generates dialogue, and persists memories.
+
+Cognitive layer additions (Phases 1-3):
+  - Phase 1: Memory reflection triggered when accumulated importance ≥ threshold.
+  - Phase 2: Daily planning triggered at the start of each new game-day.
+  - Phase 3: Relationship cache kept on CharacterSim for use by autonomy.py.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from the_world.ai.memory import MemoryManager
+from the_world.ai.planner import PlanManager
 from the_world.ai.router import generate_response
 from the_world.ai.types import AIContext, InteractionType
 from the_world.config import settings
@@ -22,6 +28,9 @@ from the_world.services.relationship_service import RelationshipService
 from the_world.simulation.engine import CharacterSim, SimulationEngine
 
 logger = logging.getLogger("the_world.ai.integration")
+
+# How often (in ticks) to check whether reflection should fire per character.
+_REFLECTION_CHECK_INTERVAL = 300  # ~5 game-hours
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +60,7 @@ def build_ai_context(
     memories: list[str],
     relationship_score: float,
     tick: int,
+    world_lore: str = "",
 ) -> AIContext:
     """Construct an ``AIContext`` from engine state."""
     mood_score, mood_label = csim.needs.calculate_mood()
@@ -68,6 +78,7 @@ def build_ai_context(
         relationship_score=relationship_score,
         memories=memories,
         sim_tick=tick,
+        world_lore=world_lore,
     )
 
 
@@ -76,32 +87,60 @@ def build_ai_context(
 # ---------------------------------------------------------------------------
 
 class AIIntegration:
-    """Manages the full encounter → dialogue → memory pipeline."""
+    """Manages the full encounter → dialogue → memory → planning pipeline."""
 
     def __init__(
         self,
         engine: SimulationEngine,
         db_factory: async_sessionmaker[AsyncSession],
+        world_ai_settings: dict | None = None,
+        world_lore: str = "",
     ) -> None:
         self.engine = engine
         self.db_factory = db_factory
+        self.world_ai_settings = world_ai_settings or {}
+        self.world_lore = world_lore
         # Cooldown tracking: frozenset({id_a, id_b}) → last_tick
         self._cooldowns: dict[frozenset[str], int] = {}
         self._cooldown_ticks = settings.AI_INTERACTION_COOLDOWN
 
-    def _is_on_cooldown(self, id_a: str, id_b: str, tick: int) -> bool:
+        # Phase 1 — reflection: track last reflection tick per character
+        self._last_reflection_tick: dict[str, int] = {}
+
+        # Phase 2 — planning: track which game-day was last planned
+        self._last_plan_day: int = -1
+
+    def _is_on_cooldown(
+        self, id_a: str, id_b: str, tick: int, friendship_score: float = 0.0,
+    ) -> bool:
         key = frozenset({id_a, id_b})
         last = self._cooldowns.get(key, -9999)
-        return (tick - last) < self._cooldown_ticks
+        cooldown = self._cooldown_ticks
+        # Phase 3: high-friendship pairs chat more often
+        if friendship_score > 75:
+            cooldown = cooldown // 2
+        return (tick - last) < cooldown
 
     def _set_cooldown(self, id_a: str, id_b: str, tick: int) -> None:
         self._cooldowns[frozenset({id_a, id_b})] = tick
 
+    # ------------------------------------------------------------------
+    # Main entry point
+    # ------------------------------------------------------------------
+
     async def process_encounters(self, tick: int) -> list[dict[str, Any]]:
-        """Full pipeline: detect → context → generate → store memory → evolve relationship → return events."""
+        """Full pipeline: detect → context → generate → store memory → evolve
+        relationship → return events.
+
+        Also triggers daily planning (Phase 2) and reflection checks (Phase 1).
+        """
+        # Phase 2 — trigger planning on new game-day
+        current_day = self.engine.clock.day
+        if current_day != self._last_plan_day:
+            await self._trigger_daily_planning(current_day)
+            self._last_plan_day = current_day
+
         pairs = detect_encounters(self.engine)
-        if not pairs:
-            return []
 
         dialogue_events: list[dict[str, Any]] = []
 
@@ -110,7 +149,18 @@ class AIIntegration:
             rel_svc = RelationshipService(db)
 
             for csim_a, csim_b in pairs:
-                if self._is_on_cooldown(csim_a.id, csim_b.id, tick):
+                # Get real relationship score (needed for cooldown check too)
+                friendship_score = await rel_svc.get_friendship_score(
+                    csim_a.id, csim_b.id
+                )
+
+                if self._is_on_cooldown(
+                    csim_a.id, csim_b.id, tick,
+                    friendship_score=friendship_score,
+                ):
+                    # Still update caches even when on cooldown
+                    csim_a.relationship_cache[csim_b.id] = friendship_score
+                    csim_b.relationship_cache[csim_a.id] = friendship_score
                     continue
 
                 # Determine interaction count (first meeting?)
@@ -118,10 +168,9 @@ class AIIntegration:
                     csim_a.id, csim_b.id
                 )
 
-                # Get real relationship score
-                friendship_score = await rel_svc.get_friendship_score(
-                    csim_a.id, csim_b.id
-                )
+                # Phase 3 — update relationship caches on both characters
+                csim_a.relationship_cache[csim_b.id] = friendship_score
+                csim_b.relationship_cache[csim_a.id] = friendship_score
 
                 if interaction_count == 0:
                     itype = InteractionType.FIRST_MEETING
@@ -146,8 +195,13 @@ class AIIntegration:
                     csim_a, csim_b, itype, mem_texts,
                     relationship_score=friendship_score,
                     tick=tick,
+                    world_lore=self.world_lore,
                 )
-                response = await generate_response(ctx, interaction_count=interaction_count)
+                response = await generate_response(
+                    ctx,
+                    interaction_count=interaction_count,
+                    world_ai_settings=self.world_ai_settings,
+                )
 
                 # Store memory if worthy
                 if response.memory_worthy:
@@ -226,6 +280,91 @@ class AIIntegration:
                     "location": csim_a.current_location,
                 })
 
+            # Phase 1 — check reflection for each character
+            for char_id, csim in self.engine.characters.items():
+                last_tick = self._last_reflection_tick.get(char_id, 0)
+                if tick - last_tick >= _REFLECTION_CHECK_INTERVAL:
+                    reflection = await memory_mgr.reflect(
+                        character_id=char_id,
+                        character_name=csim.name,
+                        since_tick=last_tick,
+                        current_tick=tick,
+                    )
+                    if reflection is not None:
+                        self._last_reflection_tick[char_id] = tick
+                        # Emit a reflection event so the frontend can display it
+                        for cb in self.engine._on_event:
+                            try:
+                                await cb({
+                                    "type": "reflection",
+                                    "characterId": char_id,
+                                    "characterName": csim.name,
+                                    "description": (
+                                        f"{csim.name} reflects: "
+                                        f"{reflection.content[:120]}"
+                                    ),
+                                    "tick": tick,
+                                    "data": {"content": reflection.content},
+                                })
+                            except Exception:
+                                logger.exception("Error emitting reflection event")
+
             await db.commit()
 
         return dialogue_events
+
+    # ------------------------------------------------------------------
+    # Phase 2 — daily planning
+    # ------------------------------------------------------------------
+
+    async def _trigger_daily_planning(self, game_day: int) -> None:
+        """Generate (or load) daily plans for every active character."""
+        if not self.engine.characters:
+            return
+
+        logger.info("Triggering daily planning for game-day %d", game_day)
+
+        try:
+            async with self.db_factory() as db:
+                planner = PlanManager(db)
+                memory_mgr = MemoryManager(db)
+
+                for char_id, csim in self.engine.characters.items():
+                    _, mood_label = csim.needs.calculate_mood()
+                    recent_mems = await memory_mgr.retrieve_recent(char_id, limit=5)
+                    mem_texts = MemoryManager.format_memories_for_prompt(recent_mems)
+
+                    goals = await planner.generate_and_store_plan(
+                        character_id=char_id,
+                        character_name=csim.name,
+                        personality=csim.personality,
+                        mood=mood_label,
+                        recent_memories=mem_texts,
+                        game_day=game_day,
+                    )
+                    csim.daily_goals = goals
+
+                    if goals:
+                        logger.info(
+                            "%s day-%d goals: %s", csim.name, game_day, goals
+                        )
+                        # Emit a planning event for the frontend
+                        for cb in self.engine._on_event:
+                            try:
+                                await cb({
+                                    "type": "daily_plan",
+                                    "characterId": char_id,
+                                    "characterName": csim.name,
+                                    "description": (
+                                        f"{csim.name}'s plan for day {game_day}: "
+                                        f"{', '.join(goals[:3])}"
+                                    ),
+                                    "tick": self.engine.clock.tick,
+                                    "data": {"goals": goals, "game_day": game_day},
+                                })
+                            except Exception:
+                                logger.exception("Error emitting daily_plan event")
+
+                await db.commit()
+        except Exception:
+            logger.exception("Error during daily planning for day %d", game_day)

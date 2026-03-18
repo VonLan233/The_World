@@ -54,6 +54,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 15s
@@ -88,3 +90,4 @@ volumes:
   pgdata:
   redisdata:
   ollama_data:
+  uploads_data:

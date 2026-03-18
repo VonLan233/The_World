@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import CharacterCard from '@/components/character/CharacterCard';
 import type { Character } from '@shared/types/character';
 import styles from './DashboardPage.module.css';
@@ -17,12 +18,18 @@ interface WorldInfo {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { characters, isLoading, error, fetchCharacters } = useCharacterStore();
+  const { isAuthenticated, isInitializing } = useAuthStore();
   const [worlds, setWorlds] = useState<WorldInfo[]>([]);
 
   useEffect(() => {
+    if (isInitializing) return;
+    if (!isAuthenticated) {
+      navigate('/');
+      return;
+    }
     fetchCharacters();
     apiClient.get<WorldInfo[]>('/worlds').then((res) => setWorlds(res.data)).catch(() => {});
-  }, [fetchCharacters]);
+  }, [fetchCharacters, isAuthenticated, isInitializing, navigate]);
 
   const handleCharacterClick = async (character: Character) => {
     let worldId: string;
@@ -33,8 +40,12 @@ export default function DashboardPage() {
       worldId = res.data.id;
       setWorlds([res.data]);
     }
-    navigate(`/world/${worldId}`, { state: { characterId: character.id } });
+    navigate(`/world/setup/${worldId}`, { state: { characterId: character.id } });
   };
+
+  if (isInitializing) {
+    return <div className={styles.page}><div className={styles.loading}><p>Loading...</p></div></div>;
+  }
 
   return (
     <div className={styles.page}>

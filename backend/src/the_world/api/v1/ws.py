@@ -13,7 +13,7 @@ from starlette.websockets import WebSocketState
 
 from the_world.db.session import async_session_factory
 from the_world.models.character import Character
-from the_world.models.world import Location
+from the_world.models.world import Location, World
 from the_world.services.simulation_manager import SimulationManager
 
 logger = logging.getLogger("the_world.ws")
@@ -143,7 +143,18 @@ async def simulation_ws(websocket: WebSocket, world_id: str) -> None:
 
                     # Register callbacks if not yet registered
                     if not engine._on_tick:
-                        register_engine_callbacks(world_id, engine)
+                        # Load per-world AI settings and lore
+                        _world_ai: dict = {}
+                        _world_lore: str = ""
+                        try:
+                            async with async_session_factory() as _db:
+                                _w = await _db.get(World, uuid_mod.UUID(world_id))
+                                if _w:
+                                    _world_ai = _w.ai_settings or {}
+                                    _world_lore = _w.lore or ""
+                        except Exception:
+                            logger.exception("Failed to load AI settings for world %s", world_id)
+                        register_engine_callbacks(world_id, engine, world_ai_settings=_world_ai, world_lore=_world_lore)
 
                     state = engine.get_state()
                     await websocket.send_json({
@@ -230,7 +241,7 @@ async def simulation_ws(websocket: WebSocket, world_id: str) -> None:
         logger.info("WS client disconnected from world %s", world_id)
 
 
-def register_engine_callbacks(world_id: str, engine: Any) -> None:
+def register_engine_callbacks(world_id: str, engine: Any, world_ai_settings: dict | None = None, world_lore: str = "") -> None:
     """Wire up engine tick/event callbacks to broadcast via WebSocket."""
 
     async def on_tick(payload: dict[str, Any]) -> None:
@@ -317,7 +328,7 @@ def register_engine_callbacks(world_id: str, engine: Any) -> None:
     # -- AI encounter callback --
     from the_world.ai.integration import AIIntegration
 
-    ai_integration = AIIntegration(engine, async_session_factory)
+    ai_integration = AIIntegration(engine, async_session_factory, world_ai_settings=world_ai_settings, world_lore=world_lore)
 
     async def on_encounter(payload: dict[str, Any]) -> None:
         tick = payload.get("tick", 0)

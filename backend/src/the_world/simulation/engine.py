@@ -37,6 +37,9 @@ class CharacterSim:
     current_location_type: str = "home"
     position_x: float = 100.0
     position_y: float = 300.0
+    # Cognitive layer (Phase 2 & 3) — ephemeral, not persisted to snapshots.
+    daily_goals: list[str] = field(default_factory=list)
+    relationship_cache: dict[str, float] = field(default_factory=dict)
 
     def to_state_update(self) -> dict[str, Any]:
         """Return a ``CharacterStateUpdate``-compatible dict."""
@@ -336,12 +339,32 @@ class SimulationEngine:
                 if o.id != csim.id and o.current_location == csim.current_location
             ]
 
+            # Phase 3: collect friendship scores for nearby characters from cache
+            nearby_scores = [
+                csim.relationship_cache.get(o.id, 0.0)
+                for o in self.characters.values()
+                if o.id != csim.id and o.current_location == csim.current_location
+            ]
+
+            # Phase 3: build map of close friends (score > 75) at other locations
+            close_friends_elsewhere: dict[str, str] = {}
+            for o in self.characters.values():
+                if (
+                    o.id != csim.id
+                    and o.current_location != csim.current_location
+                    and csim.relationship_cache.get(o.id, 0.0) > 75
+                ):
+                    close_friends_elsewhere[o.id] = o.current_location
+
             activity, destination = choose_activity(
                 csim.needs,
                 csim.personality,
                 csim.current_location_type,
                 self._loc_name_to_type,
                 nearby_characters=nearby if nearby else None,
+                daily_goals=csim.daily_goals if csim.daily_goals else None,
+                nearby_friendship_scores=nearby_scores if nearby_scores else None,
+                close_friends_elsewhere=close_friends_elsewhere if close_friends_elsewhere else None,
             )
 
             # Handle walk_to

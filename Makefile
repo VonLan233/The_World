@@ -16,6 +16,15 @@ down: ## Stop all services
 build: ## Build all Docker images
 	docker compose build
 
+refresh: ## Stop, rebuild from scratch, and restart all services
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d
+	@echo ""
+	@echo "  Frontend:  http://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "  Backend:   http://localhost:$${BACKEND_PORT:-8000}"
+	@echo "  API Docs:  http://localhost:$${BACKEND_PORT:-8000}/docs"
+
 logs: ## Show logs from all services
 	docker compose logs -f
 
